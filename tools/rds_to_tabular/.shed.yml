@@ -1,3 +1,4 @@
+# CI touch: exercise tool test/deploy workflow after Galaxy branch pin.
 name: rds_to_tabular
 owner: goeckslab
 description: Convert R serialized rectangular objects into Galaxy tabular data
