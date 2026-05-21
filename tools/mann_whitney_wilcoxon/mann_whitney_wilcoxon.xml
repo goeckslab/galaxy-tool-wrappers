@@ -1,0 +1,222 @@
+<tool id="mann_whitney_wilcoxon" name="Mann-Whitney U / Wilcoxon signed-rank test" version="0.1.0+galaxy0" profile="22.05">
+    <description>run non-parametric two-sample tests on tabular data</description>
+    <requirements>
+        <requirement type="package" version="3.11">python</requirement>
+        <requirement type="package" version="1.12.0">scipy</requirement>
+    </requirements>
+    <command detect_errors="exit_code"><![CDATA[
+python '$__tool_directory__/mann_whitney_wilcoxon.py'
+    --test '$test'
+    --input-mode '$input_mode.selector'
+    --alternative '$alternative'
+    #if $test == "mann_whitney_u"
+        --method '$mann_whitney_options.method'
+        --use-continuity '$mann_whitney_options.use_continuity'
+    #else
+        --wilcoxon-method '$wilcoxon_options.method'
+        --zero-method '$wilcoxon_options.zero_method'
+        --correction '$wilcoxon_options.correction'
+    #end if
+    #if $input_mode.selector == "grouped_table"
+        --input '$input_mode.input'
+        --value-column '$input_mode.value_column'
+        --group-column '$input_mode.group_column'
+        --has-header '$input_mode.has_header'
+        --group-a '$input_mode.group_a'
+        --group-b '$input_mode.group_b'
+    #else
+        --input-a '$input_mode.input_a'
+        --input-b '$input_mode.input_b'
+        --value-column-a '$input_mode.value_column_a'
+        --value-column-b '$input_mode.value_column_b'
+        --has-header-a '$input_mode.has_header_a'
+        --has-header-b '$input_mode.has_header_b'
+        --label-a '$input_mode.label_a'
+        --label-b '$input_mode.label_b'
+    #end if
+    --output '$output'
+    ]]></command>
+    <inputs>
+        <param name="test" type="select" label="Statistical test">
+            <option value="mann_whitney_u" selected="true">Mann-Whitney U test for independent samples</option>
+            <option value="wilcoxon_signed_rank">Wilcoxon signed-rank test for paired samples</option>
+        </param>
+        <conditional name="input_mode">
+            <param name="selector" type="select" label="Input layout">
+                <option value="grouped_table" selected="true">One table with value and group columns</option>
+                <option value="two_tables">Two tables, one value column per group</option>
+            </param>
+            <when value="grouped_table">
+                <param name="input" type="data" format="tabular,txt" label="Input table" />
+                <param name="has_header" type="boolean" checked="true" truevalue="true" falsevalue="false" label="Input has a header row" />
+                <param name="value_column" type="integer" min="1" value="2" label="Value column" help="One-based column number containing numeric observations." />
+                <param name="group_column" type="integer" min="1" value="1" label="Group column" help="One-based column number containing group labels." />
+                <param name="group_a" type="text" value="" optional="true" label="Group A label" help="Leave both group labels blank to use the two groups found in the file." />
+                <param name="group_b" type="text" value="" optional="true" label="Group B label" help="Leave both group labels blank to use the two groups found in the file." />
+            </when>
+            <when value="two_tables">
+                <param name="input_a" type="data" format="tabular,txt" label="Group A table" />
+                <param name="input_b" type="data" format="tabular,txt" label="Group B table" />
+                <param name="has_header_a" type="boolean" checked="true" truevalue="true" falsevalue="false" label="Group A table has a header row" />
+                <param name="has_header_b" type="boolean" checked="true" truevalue="true" falsevalue="false" label="Group B table has a header row" />
+                <param name="value_column_a" type="integer" min="1" value="1" label="Group A value column" />
+                <param name="value_column_b" type="integer" min="1" value="1" label="Group B value column" />
+                <param name="label_a" type="text" value="group_a" label="Group A output label" />
+                <param name="label_b" type="text" value="group_b" label="Group B output label" />
+            </when>
+        </conditional>
+        <param name="alternative" type="select" label="Alternative hypothesis">
+            <option value="two-sided" selected="true">two-sided</option>
+            <option value="less">less</option>
+            <option value="greater">greater</option>
+        </param>
+        <section name="mann_whitney_options" title="Mann-Whitney U options">
+            <param name="method" type="select" label="P-value method">
+                <option value="auto" selected="true">auto</option>
+                <option value="exact">exact</option>
+                <option value="asymptotic">asymptotic</option>
+            </param>
+            <param name="use_continuity" type="boolean" checked="true" truevalue="true" falsevalue="false" label="Use continuity correction for asymptotic method" />
+        </section>
+        <section name="wilcoxon_options" title="Wilcoxon signed-rank options">
+            <param name="method" type="select" label="P-value method">
+                <option value="auto" selected="true">auto</option>
+                <option value="exact">exact</option>
+                <option value="approx">approximate/asymptotic</option>
+            </param>
+            <param name="zero_method" type="select" label="Zero-difference handling">
+                <option value="wilcox" selected="true">wilcox: discard zero differences</option>
+                <option value="pratt">pratt: include zero differences in ranking</option>
+                <option value="zsplit">zsplit: split zero ranks between positive and negative sides</option>
+            </param>
+            <param name="correction" type="boolean" checked="false" truevalue="true" falsevalue="false" label="Apply continuity correction for normal approximation" />
+        </section>
+    </inputs>
+    <outputs>
+        <data name="output" format="tabular" label="${tool.name} on ${on_string}: results" />
+    </outputs>
+    <tests>
+        <test>
+            <param name="test" value="mann_whitney_u" />
+            <param name="input_mode|selector" value="grouped_table" />
+            <param name="input_mode|input" value="grouped_values.tsv" />
+            <param name="input_mode|has_header" value="true" />
+            <param name="input_mode|value_column" value="2" />
+            <param name="input_mode|group_column" value="1" />
+            <param name="input_mode|group_a" value="animals" />
+            <param name="input_mode|group_b" value="fungi" />
+            <param name="alternative" value="two-sided" />
+            <param name="mann_whitney_options|method" value="exact" />
+            <param name="mann_whitney_options|use_continuity" value="true" />
+            <output name="output" file="mann_whitney_grouped_results.tsv" />
+        </test>
+        <test>
+            <param name="test" value="wilcoxon_signed_rank" />
+            <param name="input_mode|selector" value="two_tables" />
+            <param name="input_mode|input_a" value="paired_before.tsv" />
+            <param name="input_mode|input_b" value="paired_after.tsv" />
+            <param name="input_mode|has_header_a" value="true" />
+            <param name="input_mode|has_header_b" value="true" />
+            <param name="input_mode|value_column_a" value="1" />
+            <param name="input_mode|value_column_b" value="1" />
+            <param name="input_mode|label_a" value="before" />
+            <param name="input_mode|label_b" value="after" />
+            <param name="alternative" value="two-sided" />
+            <param name="wilcoxon_options|method" value="exact" />
+            <param name="wilcoxon_options|zero_method" value="wilcox" />
+            <param name="wilcoxon_options|correction" value="false" />
+            <output name="output" file="wilcoxon_paired_results.tsv" />
+        </test>
+        <test>
+            <param name="test" value="wilcoxon_signed_rank" />
+            <param name="input_mode|selector" value="two_tables" />
+            <param name="input_mode|input_a" value="paired_before.tsv" />
+            <param name="input_mode|input_b" value="paired_after.tsv" />
+            <param name="input_mode|has_header_a" value="true" />
+            <param name="input_mode|has_header_b" value="true" />
+            <param name="input_mode|value_column_a" value="1" />
+            <param name="input_mode|value_column_b" value="1" />
+            <param name="input_mode|label_a" value="before" />
+            <param name="input_mode|label_b" value="after" />
+            <param name="alternative" value="two-sided" />
+            <param name="wilcoxon_options|method" value="approx" />
+            <param name="wilcoxon_options|zero_method" value="wilcox" />
+            <param name="wilcoxon_options|correction" value="false" />
+            <output name="output" file="wilcoxon_paired_approx_results.tsv" />
+        </test>
+        <test expect_exit_code="1" expect_failure="true">
+            <param name="test" value="mann_whitney_u" />
+            <param name="input_mode|selector" value="grouped_table" />
+            <param name="input_mode|input" value="grouped_values.tsv" />
+            <param name="input_mode|has_header" value="true" />
+            <param name="input_mode|value_column" value="2" />
+            <param name="input_mode|group_column" value="1" />
+            <param name="input_mode|group_a" value="animals" />
+            <param name="alternative" value="two-sided" />
+            <param name="mann_whitney_options|method" value="exact" />
+            <param name="mann_whitney_options|use_continuity" value="true" />
+            <assert_stderr>
+                <has_text text="Provide both group labels, or leave both blank to auto-detect groups" />
+            </assert_stderr>
+        </test>
+        <test expect_exit_code="1" expect_failure="true">
+            <param name="test" value="wilcoxon_signed_rank" />
+            <param name="input_mode|selector" value="grouped_table" />
+            <param name="input_mode|input" value="grouped_values.tsv" />
+            <param name="input_mode|has_header" value="true" />
+            <param name="input_mode|value_column" value="2" />
+            <param name="input_mode|group_column" value="1" />
+            <param name="input_mode|group_a" value="animals" />
+            <param name="input_mode|group_b" value="fungi" />
+            <param name="alternative" value="two-sided" />
+            <param name="wilcoxon_options|method" value="exact" />
+            <param name="wilcoxon_options|zero_method" value="wilcox" />
+            <param name="wilcoxon_options|correction" value="false" />
+            <assert_stderr>
+                <has_text text="Wilcoxon signed-rank test requires paired observations; use two_tables input mode" />
+            </assert_stderr>
+        </test>
+        <test expect_exit_code="1" expect_failure="true">
+            <param name="test" value="wilcoxon_signed_rank" />
+            <param name="input_mode|selector" value="two_tables" />
+            <param name="input_mode|input_a" value="paired_before_missing.tsv" />
+            <param name="input_mode|input_b" value="paired_after_missing.tsv" />
+            <param name="input_mode|has_header_a" value="true" />
+            <param name="input_mode|has_header_b" value="true" />
+            <param name="input_mode|value_column_a" value="1" />
+            <param name="input_mode|value_column_b" value="1" />
+            <param name="input_mode|label_a" value="before" />
+            <param name="input_mode|label_b" value="after" />
+            <param name="alternative" value="two-sided" />
+            <param name="wilcoxon_options|method" value="exact" />
+            <param name="wilcoxon_options|zero_method" value="wilcox" />
+            <param name="wilcoxon_options|correction" value="false" />
+            <assert_stderr>
+                <has_text text="Wilcoxon signed-rank test requires complete paired observations" />
+            </assert_stderr>
+        </test>
+    </tests>
+    <help><![CDATA[
+This tool runs two common non-parametric two-sample tests:
+
+**Mann-Whitney U**
+  Use for two independent groups.
+
+**Wilcoxon signed-rank**
+  Use for paired observations with equal group lengths. This test requires the
+  two-table input layout so observations are paired by row.
+
+Inputs may be provided as one table with a group column and a numeric value
+column, or as two separate tables with one numeric value column per group.
+Missing values encoded as blank, NA, NaN, None, or null are skipped for
+independent Mann-Whitney U tests. Wilcoxon signed-rank tests require complete
+paired observations.
+
+The output is a two-column tabular summary containing the selected test,
+group labels, sample sizes, alternative hypothesis, method, statistic, and
+p-value.
+    ]]></help>
+    <citations>
+        <citation type="doi">10.1038/s41592-019-0686-2</citation>
+    </citations>
+</tool>

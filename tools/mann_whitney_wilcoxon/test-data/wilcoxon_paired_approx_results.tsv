@@ -1,0 +1,10 @@
+field	value
+test	wilcoxon_signed_rank
+group_a	before
+group_b	after
+n_a	4
+n_b	4
+alternative	two-sided
+method	approx
+w_statistic	0
+p_value	0.06559969214707187

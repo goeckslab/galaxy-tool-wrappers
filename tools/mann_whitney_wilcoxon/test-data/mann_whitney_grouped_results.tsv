@@ -1,0 +1,10 @@
+field	value
+test	mann_whitney_u
+group_a	animals
+group_b	fungi
+n_a	3
+n_b	3
+alternative	two-sided
+method	exact
+u_statistic	0
+p_value	0.10000000000000001
