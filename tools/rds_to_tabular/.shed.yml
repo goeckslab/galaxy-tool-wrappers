@@ -1,0 +1,13 @@
+name: rds_to_tabular
+owner: goeckslab
+description: Convert R serialized rectangular objects into Galaxy tabular data
+long_description: |
+  Convert RDS and RData inputs containing rectangular R objects into Galaxy
+  tabular datasets. This supports common data frames, matrices, Bioconductor
+  DataFrame-like objects, and lists containing a rectangular table.
+categories:
+  - Convert Formats
+  - Text Manipulation
+remote_repository_url: https://github.com/goeckslab/galaxy-tools/tree/main/tools/rds_to_tabular
+homepage_url: https://github.com/goeckslab/galaxy-tools
+type: unrestricted
