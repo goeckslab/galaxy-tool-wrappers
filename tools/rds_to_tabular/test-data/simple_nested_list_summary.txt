@@ -1,0 +1,6 @@
+input_format	rds
+selected_path	root$table
+object_class	list
+rows	2
+columns	2
+column_names	a,b

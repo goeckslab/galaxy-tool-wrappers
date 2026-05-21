@@ -1,0 +1,6 @@
+input_format	rds
+selected_path	root
+object_class	data.frame
+rows	2
+columns	4
+column_names	rowname,gene,log2FoldChange,padj

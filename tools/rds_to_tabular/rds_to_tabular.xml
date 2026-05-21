@@ -1,0 +1,109 @@
+<tool id="rds_to_tabular" name="RDS to tabular" version="0.1.0+galaxy0" profile="22.05">
+    <description>convert R serialized rectangular objects into tabular data</description>
+    <requirements>
+        <requirement type="package" version="4.3.3">r-base</requirement>
+        <requirement type="package" version="1.42.0">bioconductor-deseq2</requirement>
+    </requirements>
+    <command detect_errors="exit_code"><![CDATA[
+Rscript '$__tool_directory__/rds_to_tabular.R'
+    --input '$input'
+    --input-format '$input_format'
+    --object-name '$object_name'
+    --list-policy '$list_policy'
+    $include_rownames
+    --output '$output'
+    --summary '$summary'
+    ]]></command>
+    <inputs>
+        <param name="input" type="data" format="rdata,rds,binary" label="R serialized input" />
+        <param name="input_format" type="select" label="Input serialization type">
+            <option value="auto" selected="true">Auto-detect from filename or file content</option>
+            <option value="rds">RDS object, read with readRDS()</option>
+            <option value="rdata">RData workspace, read with load()</option>
+        </param>
+        <param name="object_name" type="text" value="" optional="true" label="Object name or list element to extract" help="Leave blank to use the top-level RDS object or the first object in an RData workspace." />
+        <param name="list_policy" type="select" label="If the selected object is a list">
+            <option value="first_table" selected="true">Use the first rectangular table found</option>
+            <option value="atomic_columns">Use atomic list elements as columns when lengths match</option>
+            <option value="fail">Fail unless the selected object is already rectangular</option>
+        </param>
+        <param name="include_rownames" type="boolean" checked="true" truevalue="--include-rownames" falsevalue="" label="Preserve row names as the first output column" />
+    </inputs>
+    <outputs>
+        <data name="output" format="tabular" label="${tool.name} on ${on_string}: table" />
+        <data name="summary" format="txt" label="${tool.name} on ${on_string}: summary" />
+    </outputs>
+    <tests>
+        <test>
+            <param name="input" value="simple_table.rds" />
+            <param name="input_format" value="rds" />
+            <param name="list_policy" value="first_table" />
+            <param name="include_rownames" value="true" />
+            <output name="output" file="simple_table.tsv" />
+            <output name="summary" file="simple_table_summary.txt" />
+        </test>
+        <test>
+            <param name="input" value="simple_table_workspace.rdata" ftype="rdata" />
+            <param name="input_format" value="rdata" />
+            <param name="object_name" value="result_table" />
+            <param name="list_policy" value="first_table" />
+            <param name="include_rownames" value="true" />
+            <output name="output" file="simple_table.tsv" />
+            <output name="summary" file="simple_table_rdata_summary.txt" />
+        </test>
+        <test>
+            <param name="input" value="simple_table_workspace_auto" ftype="binary" />
+            <param name="input_format" value="auto" />
+            <param name="object_name" value="result_table" />
+            <param name="list_policy" value="first_table" />
+            <param name="include_rownames" value="true" />
+            <output name="output" file="simple_table.tsv" />
+            <output name="summary" file="simple_table_rdata_summary.txt" />
+        </test>
+        <test>
+            <param name="input" value="simple_nested_list.rds" />
+            <param name="input_format" value="rds" />
+            <param name="list_policy" value="first_table" />
+            <param name="include_rownames" value="true" />
+            <output name="output" file="simple_nested_list.tsv" />
+            <output name="summary" file="simple_nested_list_summary.txt" />
+        </test>
+        <test>
+            <param name="input" value="simple_unnamed_list.rds" />
+            <param name="input_format" value="rds" />
+            <param name="list_policy" value="first_table" />
+            <param name="include_rownames" value="true" />
+            <output name="output" file="simple_nested_list.tsv" />
+            <output name="summary" file="simple_unnamed_list_summary.txt" />
+        </test>
+        <test expect_exit_code="1" expect_failure="true">
+            <param name="input" value="simple_nested_list.rds" />
+            <param name="input_format" value="rds" />
+            <param name="list_policy" value="fail" />
+            <param name="include_rownames" value="true" />
+            <assert_stderr>
+                <has_text text="Selected object cannot be converted to a rectangular table" />
+            </assert_stderr>
+        </test>
+    </tests>
+    <help><![CDATA[
+This tool converts common rectangular R objects stored in `.rds`, `.rdata`, or
+`.rda` files into Galaxy tabular datasets. Auto-detection uses known filename
+extensions when available and falls back to trying both RDS and RData readers
+for extensionless Galaxy dataset paths.
+
+Use this for analysis results saved as a single R object, for example a
+differential-expression result table. It is intentionally different from older
+`.RData` extraction tools that call `load()` and cannot read `.rds` files.
+    ]]></help>
+    <citations>
+        <citation type="bibtex">@Manual{R,
+  title = {R: A Language and Environment for Statistical Computing},
+  author = {{R Core Team}},
+  organization = {R Foundation for Statistical Computing},
+  address = {Vienna, Austria},
+  year = {2024},
+  url = {https://www.R-project.org/},
+}</citation>
+    </citations>
+</tool>
