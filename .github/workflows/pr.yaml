@@ -15,6 +15,7 @@ on:
       - '*'
 env:
   GALAXY_FORK: galaxyproject
+  # Temporary until Planemo supports Galaxy 26 package versions cleanly.
   GALAXY_BRANCH: release_25.1
   MAX_CHUNKS: 4
   MAX_FILE_SIZE: 2M
