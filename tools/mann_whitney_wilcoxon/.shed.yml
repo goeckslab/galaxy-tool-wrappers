@@ -1,0 +1,13 @@
+name: mann_whitney_wilcoxon
+owner: goeckslab
+description: Mann-Whitney U and Wilcoxon signed-rank tests for tabular data
+long_description: |
+  Run non-parametric two-sample statistical tests from Galaxy tabular datasets.
+  The wrapper supports independent two-sample Mann-Whitney U tests and paired
+  Wilcoxon signed-rank tests.
+categories:
+  - Statistics
+remote_repository_url: https://github.com/goeckslab/galaxy-tools/tree/main/tools/mann_whitney_wilcoxon
+homepage_url: https://github.com/goeckslab/galaxy-tools
+type: unrestricted
+
