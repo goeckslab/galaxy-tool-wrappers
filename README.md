@@ -14,7 +14,7 @@ Planemo lint/test support, and small test data where possible.
      Bioconductor DataFrame-like objects, and lists containing a rectangular
      table.
 
-2. `phykit_extended`
+2. `phykit_metrics`
    - Exposes PhyKIT operations missing from the current ToolShed `padge/phykit`
      wrapper, especially long branch score, total tree length, and standalone
      relative composition variability.
@@ -30,7 +30,7 @@ Run lint checks with Planemo from the repository root:
 
 ```bash
 planemo lint tools/rds_to_tabular/rds_to_tabular.xml
-planemo lint tools/phykit_extended/phykit_extended.xml
+planemo lint tools/phykit_metrics/phykit_metrics.xml
 planemo lint tools/mann_whitney_wilcoxon/mann_whitney_wilcoxon.xml
 ```
 
@@ -38,14 +38,14 @@ Run committed fixture tests:
 
 ```bash
 planemo test --no_dependency_resolution tools/rds_to_tabular/rds_to_tabular.xml
-planemo test --no_dependency_resolution tools/phykit_extended/phykit_extended.xml
+planemo test --conda_auto_install tools/phykit_metrics/phykit_metrics.xml
 planemo test --conda_auto_install tools/mann_whitney_wilcoxon/mann_whitney_wilcoxon.xml
 ```
 
 Current local status:
 
 - `rds_to_tabular`: Planemo lint passed; committed fixture test passed.
-- `phykit_extended`: Planemo lint passed; committed fixture tests passed;
-  `planemo shed_lint` passed.
+- `phykit_metrics`: Planemo lint passed; committed fixture tests passed with
+  Galaxy-managed Conda dependencies; `planemo shed_lint` passed.
 - `mann_whitney_wilcoxon`: Planemo lint passed; ToolShed `shed_lint` passed;
   committed fixture tests passed with Galaxy-managed Conda dependencies.

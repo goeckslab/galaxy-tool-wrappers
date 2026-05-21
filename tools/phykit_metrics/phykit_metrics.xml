@@ -1,5 +1,5 @@
-<tool id="phykit_extended" name="PhyKIT extended metrics" version="0.1.0+galaxy0" profile="22.05">
-    <description>tree and alignment metrics not exposed by the existing PhyKIT wrapper</description>
+<tool id="phykit_metrics" name="PhyKIT metrics" version="0.1.0+galaxy0" profile="22.05">
+    <description>additional tree and alignment metrics</description>
     <requirements>
         <requirement type="package" version="2.1.93">phykit</requirement>
     </requirements>
