@@ -1,0 +1,359 @@
+name: Weekly global Tool Linting and Tests
+on:
+  schedule:
+    # Run at midnight every monday
+    - cron: '0 0 * * 1'
+  repository_dispatch:
+    types: [run-all-tool-tests-command]
+env:
+  GALAXY_FORK: galaxyproject
+  GALAXY_BRANCH: release_26.0
+  MAX_CHUNKS: 40
+jobs:
+  setup:
+    name: Setup cache and determine changed repositories
+    if: ${{ github.repository_owner == 'goeckslab' }}
+    runs-on: ubuntu-latest
+    outputs:
+      galaxy-head-sha: ${{ steps.get-galaxy-sha.outputs.galaxy-head-sha }}
+      fork: ${{ steps.get-fork-branch.outputs.fork }}
+      branch: ${{ steps.get-fork-branch.outputs.branch }}
+      repository-list: ${{ steps.discover.outputs.repository-list }}
+      chunk-count: ${{ steps.discover.outputs.chunk-count }}
+      chunk-list: ${{ steps.discover.outputs.chunk-list }}
+    strategy:
+      matrix:
+        python-version: ['3.11']
+    steps:
+    - name: Add reaction
+      if: ${{ github.event.client_payload.slash_command.command == 'run-all-tool-tests' }}
+      uses: peter-evans/create-or-update-comment@v4
+      with:
+        token: ${{ secrets.PAT }}
+        repository: ${{ github.event.client_payload.github.payload.repository.full_name }}
+        comment-id: ${{ github.event.client_payload.github.payload.comment.id }}
+        reactions: hooray
+    - name: Set galaxy fork and branch
+      id: get-fork-branch
+      run: |
+        TMP="${{ github.event.client_payload.slash_command.args.named.fork }}"
+        echo "fork=${TMP:-$GALAXY_FORK}" >> $GITHUB_OUTPUT
+        TMP="${{ github.event.client_payload.slash_command.args.named.branch }}"
+        echo "branch=${TMP:-$GALAXY_BRANCH}" >> $GITHUB_OUTPUT
+    - name: Determine latest commit in the Galaxy repo
+      id: get-galaxy-sha
+      run: echo "galaxy-head-sha=$(git ls-remote https://github.com/${{ steps.get-fork-branch.outputs.fork }}/galaxy refs/heads/${{ steps.get-fork-branch.outputs.branch }} | cut -f1)" >> $GITHUB_OUTPUT
+    - uses: actions/setup-python@v6
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Cache .cache/pip
+      uses: actions/cache@v5
+      id: cache-pip
+      with:
+        path: ~/.cache/pip
+        key: pip_cache_py_${{ matrix.python-version }}_gxy_${{ steps.get-galaxy-sha.outputs.galaxy-head-sha }}
+    - name: Cache .planemo
+      uses: actions/cache@v5
+      id: cache-planemo
+      with:
+        path: ~/.planemo
+        key: planemo_cache_py_${{ matrix.python-version }}_gxy_${{ steps.get-galaxy-sha.outputs.galaxy-head-sha }}
+    - name: Prune stale Planemo Galaxy venvs
+      run: |
+        set -euo pipefail
+        mkdir -p ~/.planemo
+        for venv in ~/.planemo/gx_venv_*; do
+          if [ ! -d "$venv" ]; then
+            continue
+          fi
+          if [ ! -x "$venv/bin/python" ]; then
+            echo "Removing stale venv without python: $venv"
+            rm -rf "$venv"
+            continue
+          fi
+          if [ ! -x "$venv/bin/galaxyctl" ]; then
+            echo "Removing stale venv without galaxyctl: $venv"
+            rm -rf "$venv"
+          fi
+        done
+    # Install the `wheel` package so that when installing other packages which
+    # are not available as wheels, pip will build a wheel for them, which can be cached.
+    - name: Install wheel
+      run: pip install wheel
+    - uses: actions/checkout@v6
+      with:
+        fetch-depth: 1
+        persist-credentials: false
+    - name: Fake a Planemo run to update cache and determine commit range, repositories, and chunks
+      uses: galaxyproject/planemo-ci-action@v1
+      id: discover
+      with:
+        create-cache: ${{ steps.cache-pip.outputs.cache-hit != 'true' || steps.cache-planemo.outputs.cache-hit != 'true' }}
+        galaxy-fork: ${{ steps.get-fork-branch.outputs.fork }}
+        galaxy-branch: ${{ steps.get-fork-branch.outputs.branch }}
+        max-chunks: ${{ env.MAX_CHUNKS }}
+        python-version: ${{ matrix.python-version }}
+    - name: Show repository list
+      run: echo '${{ steps.discover.outputs.repository-list }}'
+    - name: Show chunks
+      run: |
+        echo 'Using ${{ steps.discover.outputs.chunk-count }} chunks (${{ steps.discover.outputs.chunk-list }})'
+
+  lint:
+    name: Lint tool-list
+    needs: setup
+    if: ${{ needs.setup.outputs.repository-list != '' || needs.setup.outputs.tool-list != '' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.11']
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        fetch-depth: 1
+        persist-credentials: false
+    - uses: actions/setup-python@v6
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Cache .cache/pip
+      uses: actions/cache@v5
+      id: cache-pip
+      with:
+        path: ~/.cache/pip
+        key: pip_cache_py_${{ matrix.python-version }}_gxy_${{ needs.setup.outputs.galaxy-head-sha }}
+    - name: Cache .planemo
+      uses: actions/cache@v5
+      id: cache-planemo
+      with:
+        path: ~/.planemo
+        key: planemo_cache_py_${{ matrix.python-version }}_gxy_${{ needs.setup.outputs.galaxy-head-sha }}
+    - name: Prune stale Planemo Galaxy venvs
+      run: |
+        set -euo pipefail
+        mkdir -p ~/.planemo
+        for venv in ~/.planemo/gx_venv_*; do
+          if [ ! -d "$venv" ]; then
+            continue
+          fi
+          if [ ! -x "$venv/bin/python" ]; then
+            echo "Removing stale venv without python: $venv"
+            rm -rf "$venv"
+            continue
+          fi
+          if [ ! -x "$venv/bin/galaxyctl" ]; then
+            echo "Removing stale venv without galaxyctl: $venv"
+            rm -rf "$venv"
+          fi
+        done
+    - name: Set default skip options for scheduled runs
+      if: ${{ github.event_name == 'schedule' }}
+      run: echo "EXTRA_SKIP=--skip version_bumped" >> "$GITHUB_ENV"
+    - name: Fetch labels for dispatched runs
+      if: ${{ github.event_name == 'repository_dispatch' }}
+      id: get-labels
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.PAT || github.token }}
+        script: |
+          const fullName = context.payload.client_payload.github.payload.repository.full_name;
+          const [owner, repo] = fullName.split("/");
+          const issue_number = context.payload.client_payload.github.payload.issue.number;
+          const { data } = await github.rest.issues.listLabelsOnIssue({ owner, repo, issue_number });
+          core.setOutput("labels", JSON.stringify(data.map((l) => l.name)));
+    - name: Export labels
+      if: ${{ github.event_name == 'repository_dispatch' }}
+      run: echo 'LABELS=${{ steps.get-labels.outputs.labels }}' >> "$GITHUB_ENV"
+    - name: Conditionally skip URL/version linter
+      if: ${{ github.event_name == 'repository_dispatch' }}
+      run: |
+          set -x
+
+          to_skip=()
+          if echo '${{ env.LABELS }}' | jq -e --arg s "skip-url-check" 'index($s)' > /dev/null; then
+            to_skip+=("tool_urls")
+          fi
+          if echo '${{ env.LABELS }}' | jq -e --arg s "skip-version-check" 'index($s)' > /dev/null; then
+            to_skip+=("version_bumped")
+          fi
+
+          if [ ${#to_skip[@]} -gt 0 ]; then
+            RESULT=$(IFS=,; echo "${to_skip[*]}")
+            echo "EXTRA_SKIP=--skip $RESULT" >> "$GITHUB_ENV"
+          else
+            echo "EXTRA_SKIP=" >> "$GITHUB_ENV"
+          fi
+    - name: Planemo lint
+      uses: galaxyproject/planemo-ci-action@v1
+      id: lint
+      with:
+        mode: lint
+        fail-level: error
+        repository-list: ${{ needs.setup.outputs.repository-list }}
+        tool-list: ${{ needs.setup.outputs.tool-list }}
+        additional-planemo-options: ${{ env.EXTRA_SKIP }}
+    - uses: actions/upload-artifact@v7
+      if: ${{ failure() }}
+      with:
+        name: 'Tool linting output'
+        path: lint_report.txt
+
+  test:
+    name: Test tools
+    # This job runs on Linux
+    runs-on: ubuntu-latest
+    needs: setup
+    if: ${{ needs.setup.outputs.repository-list != '' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        chunk: ${{ fromJson(needs.setup.outputs.chunk-list) }}
+        python-version: ['3.11']
+    services:
+      postgres:
+        image: postgres:11
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+    steps:
+    - name: Free disk space
+      run: |
+        echo "Disk usage BEFORE cleanup:"
+        df -h
+        echo "Removing .NET..."
+        sudo rm -rf /usr/share/dotnet || true
+        echo "Removing Android SDK..."
+        sudo rm -rf /usr/local/lib/android || true
+        echo "Removing Haskell..."
+        sudo rm -rf /opt/ghc || true
+        sudo rm -rf /usr/local/.ghcup || true
+        echo "Docker prune..."
+        sudo docker system prune -af || true
+        echo "Disk usage AFTER cleanup:"
+        df -h
+    # checkout the repository
+    # and use it as the current working directory
+    - uses: actions/checkout@v6
+      with:
+        fetch-depth: 1
+        persist-credentials: false
+    - uses: actions/setup-python@v6
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Cache .cache/pip
+      uses: actions/cache@v5
+      id: cache-pip
+      with:
+        path: ~/.cache/pip
+        key: pip_cache_py_${{ matrix.python-version }}_gxy_${{ needs.setup.outputs.galaxy-head-sha }}
+    - name: Cache .planemo
+      uses: actions/cache@v5
+      id: cache-planemo
+      with:
+        path: ~/.planemo
+        key: planemo_cache_py_${{ matrix.python-version }}_gxy_${{ needs.setup.outputs.galaxy-head-sha }}
+    - name: Prune stale Planemo Galaxy venvs
+      run: |
+        set -euo pipefail
+        mkdir -p ~/.planemo
+        for venv in ~/.planemo/gx_venv_*; do
+          if [ ! -d "$venv" ]; then
+            continue
+          fi
+          if [ ! -x "$venv/bin/python" ]; then
+            echo "Removing stale venv without python: $venv"
+            rm -rf "$venv"
+            continue
+          fi
+          if [ ! -x "$venv/bin/galaxyctl" ]; then
+            echo "Removing stale venv without galaxyctl: $venv"
+            rm -rf "$venv"
+          fi
+        done
+    - name: Get number of CPU cores
+      uses: SimenB/github-actions-cpu-cores@v2
+      id: cpu-cores
+    - name: Planemo test
+      uses: galaxyproject/planemo-ci-action@v1
+      id: test
+      with:
+        mode: test
+        repository-list: ${{ needs.setup.outputs.repository-list }}
+        galaxy-fork: ${{ needs.setup.outputs.fork }}
+        galaxy-branch: ${{ needs.setup.outputs.branch }}
+        chunk: ${{ matrix.chunk }}
+        chunk-count: ${{ needs.setup.outputs.chunk-count }}
+        galaxy-slots: ${{ steps.cpu-cores.outputs.count }}
+        # Limit each test to 15 minutes
+        test_timeout: 1500
+    - uses: actions/upload-artifact@v7
+      with:
+        name: 'Tool test output ${{ matrix.chunk }}'
+        path: upload
+
+  # - combine the results of the test chunks (which will never fail due
+  #   to `|| true`) and create a global test report as json and html which
+  #   is provided as artifact
+  # - check if any tool test actually failed (by lookup in the combined json)
+  #   and fail this step if this is the case
+  combine_outputs:
+    name: Combine chunked test results
+    needs: [setup, test]
+    strategy:
+      matrix:
+        python-version: ['3.11']
+    # This job runs on Linux
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/download-artifact@v8
+      with:
+        path: artifacts
+    - uses: actions/setup-python@v6
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Cache .cache/pip
+      uses: actions/cache@v5
+      id: cache-pip
+      with:
+        path: ~/.cache/pip
+        key: pip_cache_py_${{ matrix.python-version }}_gxy_${{ needs.setup.outputs.galaxy-head-sha }}
+    - name: Combine outputs
+      uses: galaxyproject/planemo-ci-action@v1
+      id: combine
+      with:
+        mode: combine
+        html-report: true
+        markdown-report: true
+    - uses: actions/upload-artifact@v7
+      with:
+        name: 'All tool test results'
+        path: upload
+    - run: cat upload/tool_test_output.md >> $GITHUB_STEP_SUMMARY
+    - name: Create URL to the run output
+      if: ${{ github.event.client_payload.slash_command.command == 'run-all-tool-tests' }}
+      id: vars
+      run: echo "run-url=https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" >> $GITHUB_OUTPUT
+
+    - name: Create comment
+      if: ${{ github.event.client_payload.slash_command.command == 'run-all-tool-tests' }}
+      uses: peter-evans/create-or-update-comment@v4
+      with:
+        token: ${{ secrets.PAT }}
+        repository: ${{ github.event.client_payload.github.payload.repository.full_name }}
+        issue-number: ${{ github.event.client_payload.github.payload.issue.number }}
+        body: |
+          Summary:
+
+          ${{ steps.combine.outputs.statistics }}
+
+          [Find all tool test results here][1]
+
+          [1]: ${{ steps.vars.outputs.run-url }}
+    - name: Check outputs
+      uses: galaxyproject/planemo-ci-action@v1
+      id: check
+      with:
+        mode: check
