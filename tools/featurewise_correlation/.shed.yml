@@ -1,0 +1,13 @@
+name: featurewise_correlation
+owner: goeckslab
+description: Compute per-feature correlations between matched matrices
+long_description: |
+  Compute one Pearson or Spearman correlation test per matched feature across
+  two tabular matrices, with pairwise missing-value handling and
+  multiple-testing correction.
+categories:
+  - Statistics
+  - Transcriptomics
+remote_repository_url: https://github.com/goeckslab/galaxy-tool-wrappers/tree/main/tools/featurewise_correlation
+homepage_url: https://github.com/goeckslab/galaxy-tool-wrappers
+type: unrestricted

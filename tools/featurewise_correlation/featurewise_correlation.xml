@@ -1,11 +1,11 @@
-<tool id="rowwise_association" name="Row-wise association" version="0.1.0+galaxy0" profile="22.05">
-    <description>test matched features across two matrices</description>
+<tool id="featurewise_correlation" name="Feature-wise Correlation Tests" version="0.1.0+galaxy0" profile="22.05">
+    <description>compute per-feature Spearman or Pearson correlations between matched matrices</description>
     <requirements>
         <requirement type="package" version="1.26.4">numpy</requirement>
         <requirement type="package" version="1.12.0">scipy</requirement>
     </requirements>
     <command detect_errors="exit_code"><![CDATA[
-python '$__tool_directory__/rowwise_association.py'
+python '$__tool_directory__/featurewise_correlation.py'
     --matrix-a '$matrix_a'
     --matrix-b '$matrix_b'
     --delimiter-a '$delimiter_a'
@@ -50,7 +50,7 @@ python '$__tool_directory__/rowwise_association.py'
             <option value="none" selected="true">No transform</option>
             <option value="negate">Multiply by -1</option>
         </param>
-        <param name="method" type="select" label="Association method">
+        <param name="method" type="select" label="Correlation method">
             <option value="spearman" selected="true">Spearman rank correlation</option>
             <option value="pearson">Pearson correlation</option>
         </param>
@@ -82,8 +82,8 @@ python '$__tool_directory__/rowwise_association.py'
             <param name="alternative" value="two-sided" />
             <param name="alpha" value="0.05" />
             <param name="min_pairs" value="3" />
-            <output name="per_feature" file="rowwise_association_per_feature.tsv" />
-            <output name="summary" file="rowwise_association_summary.tsv" />
+            <output name="per_feature" file="featurewise_correlation_per_feature.tsv" />
+            <output name="summary" file="featurewise_correlation_summary.tsv" />
         </test>
         <test>
             <param name="matrix_a" value="matrix_no_header_a.tsv" />
@@ -100,14 +100,68 @@ python '$__tool_directory__/rowwise_association.py'
             <param name="alternative" value="two-sided" />
             <param name="alpha" value="0.05" />
             <param name="min_pairs" value="3" />
-            <output name="per_feature" file="rowwise_association_no_header_per_feature.tsv" />
-            <output name="summary" file="rowwise_association_no_header_summary.tsv" />
+            <output name="per_feature" file="featurewise_correlation_no_header_per_feature.tsv" />
+            <output name="summary" file="featurewise_correlation_no_header_summary.tsv" />
+        </test>
+        <test>
+            <param name="matrix_a" value="matrix_no_header_a.tsv" />
+            <param name="matrix_b" value="matrix_shifted_no_header_b.tsv" />
+            <param name="delimiter_a" value="tab" />
+            <param name="delimiter_b" value="tab" />
+            <param name="has_header_a" value="false" />
+            <param name="has_header_b" value="false" />
+            <param name="id_column_a" value="1" />
+            <param name="id_column_b" value="2" />
+            <param name="feature_start_a" value="2" />
+            <param name="feature_start_b" value="3" />
+            <param name="method" value="spearman" />
+            <param name="alternative" value="two-sided" />
+            <param name="alpha" value="0.05" />
+            <param name="min_pairs" value="3" />
+            <output name="per_feature" file="featurewise_correlation_no_header_per_feature.tsv" />
+            <output name="summary" file="featurewise_correlation_no_header_summary.tsv" />
+        </test>
+        <test expect_exit_code="1" expect_failure="true">
+            <param name="matrix_a" value="matrix_blank_header_a.tsv" />
+            <param name="matrix_b" value="matrix_blank_header_b.tsv" />
+            <param name="delimiter_a" value="tab" />
+            <param name="delimiter_b" value="tab" />
+            <param name="has_header_a" value="true" />
+            <param name="has_header_b" value="true" />
+            <param name="id_column_a" value="1" />
+            <param name="id_column_b" value="1" />
+            <param name="feature_start_a" value="2" />
+            <param name="feature_start_b" value="2" />
+            <assert_stderr>
+                <has_text text="Empty feature names are ambiguous" />
+            </assert_stderr>
+        </test>
+        <test expect_exit_code="1" expect_failure="true">
+            <param name="matrix_a" value="matrix_no_header_a.tsv" />
+            <param name="matrix_b" value="matrix_no_header_one_feature_b.tsv" />
+            <param name="delimiter_a" value="tab" />
+            <param name="delimiter_b" value="tab" />
+            <param name="has_header_a" value="false" />
+            <param name="has_header_b" value="false" />
+            <param name="id_column_a" value="1" />
+            <param name="id_column_b" value="1" />
+            <param name="feature_start_a" value="2" />
+            <param name="feature_start_b" value="2" />
+            <assert_stderr>
+                <has_text text="No-header inputs must contain the same number of selected feature columns" />
+            </assert_stderr>
         </test>
     </tests>
     <help><![CDATA[
-This tool computes one association test per matched feature across two matrices.
-Rows are observations and feature columns are matched by header name. Observation
-rows are matched by the selected identifier columns.
+Use this tool when each selected column is a feature, such as a gene, and you
+need one Spearman or Pearson correlation test per feature with multiple-testing
+correction such as Benjamini-Hochberg FDR.
+
+Rows are observations and observation rows are matched by the selected
+identifier columns. For matrices with headers, feature columns are matched by
+header name. For matrices without headers, selected feature columns are matched
+by ordinal position after the first feature column, and the selected feature
+counts must match.
 
 Missing values are dropped separately for each feature, so a feature can still
 be tested when only some observation pairs are missing. The per-feature p-values

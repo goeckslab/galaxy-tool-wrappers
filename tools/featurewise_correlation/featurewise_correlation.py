@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Feature-wise association tests across matched tabular matrices."""
+"""Feature-wise correlation tests across matched tabular matrices."""
 
 from __future__ import annotations
 
@@ -56,6 +56,10 @@ def feature_names(path: Path, sep: str, start_col: int, *, has_header: bool) -> 
         raise ValueError("Feature start column is beyond the table width")
     if has_header:
         names = [value.strip() for value in first_row[start_col:]]
+        empty_positions = [str(start_col + i + 1) for i, name in enumerate(names) if not name]
+        if empty_positions:
+            sample = ", ".join(empty_positions[:10])
+            raise ValueError(f"Empty feature names are ambiguous: columns {sample}")
     else:
         names = [f"column_{i + 1}" for i in range(start_col, len(first_row))]
     seen: set[str] = set()
@@ -157,13 +161,22 @@ def run(args: argparse.Namespace) -> None:
     path_b = Path(args.matrix_b)
     names_a = feature_names(path_a, sep_a, args.feature_start_a, has_header=args.has_header_a)
     names_b = feature_names(path_b, sep_b, args.feature_start_b, has_header=args.has_header_b)
-    b_feature_pos = {name: i for i, name in enumerate(names_b)}
-    common_features = [name for name in names_a if name in b_feature_pos]
-    if not common_features:
-        raise ValueError("No feature names overlap between the two matrices")
-
-    indices_a = [args.feature_start_a + names_a.index(name) for name in common_features]
-    indices_b = [args.feature_start_b + b_feature_pos[name] for name in common_features]
+    if args.has_header_a != args.has_header_b:
+        raise ValueError("Both matrices must either have header rows or no header rows")
+    if args.has_header_a:
+        a_feature_pos = {name: i for i, name in enumerate(names_a)}
+        b_feature_pos = {name: i for i, name in enumerate(names_b)}
+        common_features = [name for name in names_a if name in b_feature_pos]
+        if not common_features:
+            raise ValueError("No feature names overlap between the two matrices")
+        indices_a = [args.feature_start_a + a_feature_pos[name] for name in common_features]
+        indices_b = [args.feature_start_b + b_feature_pos[name] for name in common_features]
+    else:
+        if len(names_a) != len(names_b):
+            raise ValueError("No-header inputs must contain the same number of selected feature columns")
+        common_features = names_a
+        indices_a = list(range(args.feature_start_a, args.feature_start_a + len(names_a)))
+        indices_b = list(range(args.feature_start_b, args.feature_start_b + len(names_b)))
     ids_a, matrix_a = read_matrix(path_a, sep_a, args.id_column_a, indices_a, has_header=args.has_header_a)
     ids_b, matrix_b = read_matrix(path_b, sep_b, args.id_column_b, indices_b, has_header=args.has_header_b)
     aligned_ids, matrix_a, matrix_b = align_rows(ids_a, matrix_a, ids_b, matrix_b)
