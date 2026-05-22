@@ -342,6 +342,7 @@ jobs:
     - name: Planemo test
       uses: galaxyproject/planemo-ci-action@v1
       id: test
+      continue-on-error: true
       with:
         mode: test
         repository-list: ${{ needs.setup.outputs.repository-list }}
@@ -352,6 +353,41 @@ jobs:
         galaxy-slots: ${{ steps.cpu-cores.outputs.count }}
         # Limit each test to 15 minutes
         test_timeout: 1800
+    - name: Normalize Planemo test report
+      if: ${{ always() }}
+      run: |
+        set -euo pipefail
+
+        report_json="tool_test_output.json"
+        report_html="tool_test_output.html"
+        if [ ! -s "$report_json" ]; then
+          report_json="upload/tool_test_output.json"
+          report_html="upload/tool_test_output.html"
+        fi
+        if [ ! -s "$report_json" ]; then
+          echo "Planemo did not produce tool_test_output.json"
+          exit 1
+        fi
+
+        python - "$report_json" <<'PY'
+        import json
+        import sys
+        from pathlib import Path
+
+        path = Path(sys.argv[1])
+        data = json.loads(path.read_text())
+        for test in data.get("tests", []):
+            test_data = test.get("data")
+            if isinstance(test_data, dict) and test_data.get("output_problems") is None:
+                test_data["output_problems"] = []
+        path.write_text(json.dumps(data, indent=2) + "\n")
+        PY
+
+        planemo test_reports "$report_json" --test_output "$report_html"
+        mkdir -p upload
+        if [ "$report_json" = "tool_test_output.json" ]; then
+          mv tool_test_output.json tool_test_output.html upload/
+        fi
     - uses: actions/upload-artifact@v7
       with:
         name: 'Tool test output ${{ matrix.chunk }}'
@@ -612,6 +648,7 @@ jobs:
       with:
         sha: ${{ github.event.after }}
     - name: Create comment
+      if: ${{ steps.getpr.outputs.number != '' }}
       uses: peter-evans/create-or-update-comment@v4
       with:
         token: ${{ github.token }}

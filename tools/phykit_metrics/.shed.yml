@@ -1,4 +1,3 @@
-# CI touch: exercise tool test/deploy workflow after Galaxy branch pin.
 name: phykit_metrics
 owner: goeckslab
 description: PhyKIT tree and alignment metrics

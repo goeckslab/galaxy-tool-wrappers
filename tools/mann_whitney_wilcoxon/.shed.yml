@@ -1,4 +1,3 @@
-# CI touch: exercise tool test/deploy workflow after Galaxy branch pin.
 name: mann_whitney_wilcoxon
 owner: goeckslab
 description: Mann-Whitney U and Wilcoxon signed-rank tests for tabular data
