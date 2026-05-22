@@ -1,0 +1,150 @@
+<tool id="gseapy_enrichr" name="GSEApy Enrichr" version="0.1.0+galaxy0" profile="22.05">
+    <description>run Enrichr-style over-representation analysis</description>
+    <requirements>
+        <requirement type="package" version="3.11">python</requirement>
+        <requirement type="package" version="1.2.1">gseapy</requirement>
+        <requirement type="package" version="2.3.3">pandas</requirement>
+    </requirements>
+    <command detect_errors="exit_code"><![CDATA[
+python '$__tool_directory__/gseapy_enrichr.py'
+    --gene-list '$gene_list.input'
+    --gene-column '$gene_list.column'
+    --delimiter '$gene_list.delimiter'
+    --has-header '$gene_list.has_header'
+    #if $gene_sets.source == "library"
+        --gene-sets '$gene_sets.library_name'
+        --organism '$gene_sets.organism'
+    #else
+        --gene-sets '$gene_sets.gmt'
+        --organism '$gene_sets.organism'
+    #end if
+    #if $background.selector == "yes"
+        --background '$background.input'
+        --background-column '$background.column'
+        --background-delimiter '$background.delimiter'
+        --background-has-header '$background.has_header'
+    #end if
+    --cutoff '$advanced.cutoff'
+    --sort-by '$summary_options.sort_by'
+    --top-n '$summary_options.top_n'
+    --term-contains '$summary_options.term_contains'
+    --output-results '$results'
+    --output-top '$top_terms'
+    --output-summary '$term_summary'
+    --metadata '$metadata'
+    ]]></command>
+    <inputs>
+        <section name="gene_list" title="Gene list">
+            <param name="input" type="data" format="tabular,txt,csv" label="Gene list or table" />
+            <param name="delimiter" type="select" label="Gene-list delimiter">
+                <option value="line" selected="true">One gene per line</option>
+                <option value="tab">Tabular</option>
+                <option value="comma">CSV</option>
+            </param>
+            <param name="has_header" type="boolean" checked="false" truevalue="true" falsevalue="false" label="Input has a header row" />
+            <param name="column" type="text" value="1" label="Gene column" help="Use a one-based column number, or a column name when the input has a header." />
+        </section>
+        <conditional name="gene_sets">
+            <param name="source" type="select" label="Gene set source">
+                <option value="library" selected="true">Enrichr library name</option>
+                <option value="gmt">Uploaded GMT file</option>
+            </param>
+            <when value="library">
+                <param name="library_name" type="text" value="" label="Enrichr library name" help="For example: KEGG_2021_Human, WikiPathways_2019_Mouse, or GO_Biological_Process_2023." />
+                <param name="organism" type="text" value="human" label="Organism" help="Organism label passed to GSEApy, for example human or mouse." />
+            </when>
+            <when value="gmt">
+                <param name="gmt" type="data" format="tabular,txt" label="Gene sets in GMT format" />
+                <param name="organism" type="text" value="human" label="Organism" help="Organism label stored in metadata. Local GMT analysis does not require an Enrichr organism lookup." />
+            </when>
+        </conditional>
+        <conditional name="background">
+            <param name="selector" type="select" label="Background genes">
+                <option value="no" selected="true">Do not provide a custom background</option>
+                <option value="yes">Use a custom background gene list</option>
+            </param>
+            <when value="no" />
+            <when value="yes">
+                <param name="input" type="data" format="tabular,txt,csv" label="Background gene list or table" />
+                <param name="delimiter" type="select" label="Background delimiter">
+                    <option value="line" selected="true">One gene per line</option>
+                    <option value="tab">Tabular</option>
+                    <option value="comma">CSV</option>
+                </param>
+                <param name="has_header" type="boolean" checked="false" truevalue="true" falsevalue="false" label="Background has a header row" />
+                <param name="column" type="text" value="1" label="Background gene column" help="Use a one-based column number, or a column name when the input has a header." />
+            </when>
+        </conditional>
+        <section name="summary_options" title="Ranking and term summary">
+            <param name="sort_by" type="select" label="Rank terms by">
+                <option value="p_value" selected="true">P-value, then adjusted P-value, then combined score</option>
+                <option value="adjusted_p_value">Adjusted P-value, then P-value, then combined score</option>
+                <option value="combined_score">Combined score, then P-value</option>
+                <option value="input_order">GSEApy result order</option>
+            </param>
+            <param name="top_n" type="integer" min="0" value="20" label="Number of top terms to output" />
+            <param name="term_contains" type="text" value="" optional="true" label="Count top terms containing substring" help="Optional case-insensitive term-name substring for the summary output." />
+        </section>
+        <section name="advanced" title="Advanced options">
+            <param name="cutoff" type="float" min="0" max="1" value="1.0" label="GSEApy cutoff" help="Use 1.0 to retain all returned terms before Galaxy-side ranking/filtering." />
+        </section>
+    </inputs>
+    <outputs>
+        <data name="results" format="tabular" label="${tool.name} on ${on_string}: results" />
+        <data name="top_terms" format="tabular" label="${tool.name} on ${on_string}: top terms" />
+        <data name="term_summary" format="tabular" label="${tool.name} on ${on_string}: term summary" />
+        <data name="metadata" format="json" label="${tool.name} on ${on_string}: metadata" />
+    </outputs>
+    <tests>
+        <test>
+            <param name="gene_list|input" value="small_gene_list.txt" />
+            <param name="gene_list|delimiter" value="line" />
+            <param name="gene_list|has_header" value="false" />
+            <param name="gene_list|column" value="1" />
+            <param name="gene_sets|source" value="gmt" />
+            <param name="gene_sets|gmt" value="small_gene_sets.gmt" />
+            <param name="gene_sets|organism" value="mouse" />
+            <param name="background|selector" value="no" />
+            <param name="summary_options|sort_by" value="p_value" />
+            <param name="summary_options|top_n" value="2" />
+            <param name="summary_options|term_contains" value="oxidative" />
+            <param name="advanced|cutoff" value="1.0" />
+            <output name="top_terms">
+                <assert_contents>
+                    <has_text text="Oxidative response" />
+                    <has_text text="Metabolic process" />
+                    <has_text text="0.16666666666666663" />
+                </assert_contents>
+            </output>
+            <output name="term_summary" file="small_term_summary.tsv" />
+            <output name="metadata">
+                <assert_contents>
+                    <has_text text='"gene_count": 4' />
+                    <has_text text='"term_contains": "oxidative"' />
+                </assert_contents>
+            </output>
+        </test>
+    </tests>
+    <help><![CDATA[
+This tool runs GSEApy's Enrichr over-representation workflow from a Galaxy gene
+list. It accepts either an Enrichr library name or an uploaded GMT gene-set file.
+
+The main result table is standardized to stable Galaxy-friendly columns:
+rank, gene set, term, overlap, p-value, adjusted p-value, odds ratio, combined
+score, and genes. The top-terms output applies the selected ranking rule before
+selecting the requested number of terms.
+
+The optional term-substring summary counts how many of the top ranked terms
+contain a user-provided case-insensitive substring and reports the fraction.
+This is useful when an analysis asks for the fraction of top enriched terms
+matching a pathway-name concept.
+
+Remote Enrichr library names require network access from the Galaxy job
+environment. Uploaded GMT files run locally and are recommended when a fixed
+gene-set collection must be preserved.
+    ]]></help>
+    <citations>
+        <citation type="doi">10.1093/bioinformatics/btac757</citation>
+        <citation type="doi">10.1186/1471-2105-14-128</citation>
+    </citations>
+</tool>

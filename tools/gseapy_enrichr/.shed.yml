@@ -1,0 +1,13 @@
+name: gseapy_enrichr
+owner: goeckslab
+description: GSEApy Enrichr over-representation analysis
+long_description: |
+  Galaxy wrapper for GSEApy Enrichr over-representation analysis from a gene
+  list. The wrapper can query a named Enrichr library or use an uploaded GMT
+  file, standardizes the enrichment result table, and optionally summarizes
+  top ranked terms containing a substring.
+categories:
+  - Statistics
+remote_repository_url: https://github.com/goeckslab/galaxy-tools/tree/main/tools/gseapy_enrichr
+homepage_url: https://github.com/goeckslab/galaxy-tools
+type: unrestricted
