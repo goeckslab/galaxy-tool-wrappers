@@ -1,0 +1,12 @@
+name: nonparametric_rank_tests
+owner: goeckslab
+description: Nonparametric rank tests for tabular data
+long_description: |
+  Run nonparametric rank tests from Galaxy tabular datasets. The wrapper
+  currently supports independent two-sample Mann-Whitney U tests and paired
+  Wilcoxon signed-rank tests.
+categories:
+  - Statistics
+remote_repository_url: https://github.com/goeckslab/galaxy-tools/tree/main/tools/nonparametric_rank_tests
+homepage_url: https://github.com/goeckslab/galaxy-tools
+type: unrestricted

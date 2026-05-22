@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Run Mann-Whitney U or Wilcoxon signed-rank tests from tabular inputs."""
+"""Run selected nonparametric rank tests from tabular inputs."""
 
 from __future__ import annotations
 

@@ -1,11 +1,10 @@
-<tool id="mann_whitney_wilcoxon" name="Mann-Whitney U / Wilcoxon signed-rank test" version="0.1.0+galaxy0" profile="22.05">
-    <description>run non-parametric two-sample tests on tabular data</description>
+<tool id="nonparametric_rank_tests" name="Nonparametric rank tests" version="0.1.0+galaxy0" profile="22.05">
+    <description>run rank-based tests on tabular data</description>
     <requirements>
-        <requirement type="package" version="3.11">python</requirement>
-        <requirement type="package" version="1.12.0">scipy</requirement>
+        <container type="docker">quay.io/goeckslab/nonparametric_rank_tests:0.1.0</container>
     </requirements>
     <command detect_errors="exit_code"><![CDATA[
-python '$__tool_directory__/mann_whitney_wilcoxon.py'
+python '$__tool_directory__/nonparametric_rank_tests.py'
     --test '$test'
     --input-mode '$input_mode.selector'
     --alternative '$alternative'
@@ -197,7 +196,7 @@ python '$__tool_directory__/mann_whitney_wilcoxon.py'
         </test>
     </tests>
     <help><![CDATA[
-This tool runs two common non-parametric two-sample tests:
+This tool currently runs two common nonparametric rank tests:
 
 **Mann-Whitney U**
   Use for two independent groups.
