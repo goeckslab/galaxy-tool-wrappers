@@ -1,9 +1,7 @@
-<tool id="gseapy_enrichr" name="GSEApy Enrichr" version="0.1.0+galaxy0" profile="22.05">
+<tool id="gseapy_enrichr" name="GSEApy Enrichr" version="0.1.0+galaxy1" profile="22.05">
     <description>run Enrichr-style over-representation analysis</description>
     <requirements>
-        <requirement type="package" version="3.11">python</requirement>
-        <requirement type="package" version="1.2.1">gseapy</requirement>
-        <requirement type="package" version="2.3.3">pandas</requirement>
+        <container type="docker">quay.io/goeckslab/gseapy_enrichr:0.1.0</container>
     </requirements>
     <command detect_errors="exit_code"><![CDATA[
 python '$__tool_directory__/gseapy_enrichr.py'
