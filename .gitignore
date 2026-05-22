@@ -4,6 +4,7 @@ __pycache__/
 .venv/
 .planemo/
 planemo_test_output/
+tool_test_output.*
 
 # Local-only planning/validation artifacts.
 to-do.md
@@ -12,5 +13,4 @@ validation/
 
 # Deferred wrapper design notes; do not publish until implemented.
 tools/pydeseq2/
-tools/gseapy_enrichr/
 .github/workflows/planemo.yml
