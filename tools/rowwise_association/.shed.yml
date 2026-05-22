@@ -1,0 +1,13 @@
+name: rowwise_association
+owner: goeckslab
+description: Feature-wise association tests across matched observations
+long_description: |
+  Compute one association test per matched feature across two tabular
+  matrices, with pairwise missing-value handling and multiple-testing
+  correction.
+categories:
+  - Statistics
+  - Transcriptomics
+remote_repository_url: https://github.com/goeckslab/galaxy-tools/tree/main/tools/rowwise_association
+homepage_url: https://github.com/goeckslab/galaxy-tools
+type: unrestricted

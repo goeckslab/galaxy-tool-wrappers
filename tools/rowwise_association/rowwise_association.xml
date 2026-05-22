@@ -1,0 +1,119 @@
+<tool id="rowwise_association" name="Row-wise association" version="0.1.0+galaxy0" profile="22.05">
+    <description>test matched features across two matrices</description>
+    <requirements>
+        <requirement type="package" version="1.26.4">numpy</requirement>
+        <requirement type="package" version="1.12.0">scipy</requirement>
+    </requirements>
+    <command detect_errors="exit_code"><![CDATA[
+python '$__tool_directory__/rowwise_association.py'
+    --matrix-a '$matrix_a'
+    --matrix-b '$matrix_b'
+    --delimiter-a '$delimiter_a'
+    --delimiter-b '$delimiter_b'
+    --has-header-a '$has_header_a'
+    --has-header-b '$has_header_b'
+    --id-column-a '$id_column_a'
+    --id-column-b '$id_column_b'
+    --feature-start-a '$feature_start_a'
+    --feature-start-b '$feature_start_b'
+    --transform-a '$transform_a'
+    --transform-b '$transform_b'
+    --method '$method'
+    --alternative '$alternative'
+    --alpha '$alpha'
+    --min-pairs '$min_pairs'
+    --per-feature-output '$per_feature'
+    --summary-output '$summary'
+    ]]></command>
+    <inputs>
+        <param name="matrix_a" type="data" format="tabular,csv,txt" label="First matrix" />
+        <param name="matrix_b" type="data" format="tabular,csv,txt" label="Second matrix" />
+        <param name="delimiter_a" type="select" label="First matrix delimiter">
+            <option value="tab" selected="true">Tab</option>
+            <option value="comma">Comma</option>
+        </param>
+        <param name="delimiter_b" type="select" label="Second matrix delimiter">
+            <option value="tab" selected="true">Tab</option>
+            <option value="comma">Comma</option>
+        </param>
+        <param name="has_header_a" type="boolean" checked="true" truevalue="true" falsevalue="false" label="First matrix has a header row" />
+        <param name="has_header_b" type="boolean" checked="true" truevalue="true" falsevalue="false" label="Second matrix has a header row" />
+        <param name="id_column_a" type="integer" min="1" value="1" label="First matrix observation ID column" />
+        <param name="id_column_b" type="integer" min="1" value="1" label="Second matrix observation ID column" />
+        <param name="feature_start_a" type="integer" min="1" value="2" label="First matrix first feature column" />
+        <param name="feature_start_b" type="integer" min="1" value="2" label="Second matrix first feature column" />
+        <param name="transform_a" type="select" label="Transform first matrix values">
+            <option value="none" selected="true">No transform</option>
+            <option value="negate">Multiply by -1</option>
+        </param>
+        <param name="transform_b" type="select" label="Transform second matrix values">
+            <option value="none" selected="true">No transform</option>
+            <option value="negate">Multiply by -1</option>
+        </param>
+        <param name="method" type="select" label="Association method">
+            <option value="spearman" selected="true">Spearman rank correlation</option>
+            <option value="pearson">Pearson correlation</option>
+        </param>
+        <param name="alternative" type="select" label="Alternative hypothesis">
+            <option value="two-sided" selected="true">two-sided</option>
+            <option value="less">less</option>
+            <option value="greater">greater</option>
+        </param>
+        <param name="alpha" type="float" min="0" max="1" value="0.05" label="Adjusted p-value threshold" />
+        <param name="min_pairs" type="integer" min="3" value="3" label="Minimum paired observations per feature" />
+    </inputs>
+    <outputs>
+        <data name="per_feature" format="tabular" label="${tool.name} on ${on_string}: per-feature tests" />
+        <data name="summary" format="tabular" label="${tool.name} on ${on_string}: summary" />
+    </outputs>
+    <tests>
+        <test>
+            <param name="matrix_a" value="matrix_a.tsv" />
+            <param name="matrix_b" value="matrix_b.tsv" />
+            <param name="delimiter_a" value="tab" />
+            <param name="delimiter_b" value="tab" />
+            <param name="has_header_a" value="true" />
+            <param name="has_header_b" value="true" />
+            <param name="id_column_a" value="1" />
+            <param name="id_column_b" value="1" />
+            <param name="feature_start_a" value="2" />
+            <param name="feature_start_b" value="2" />
+            <param name="method" value="spearman" />
+            <param name="alternative" value="two-sided" />
+            <param name="alpha" value="0.05" />
+            <param name="min_pairs" value="3" />
+            <output name="per_feature" file="rowwise_association_per_feature.tsv" />
+            <output name="summary" file="rowwise_association_summary.tsv" />
+        </test>
+        <test>
+            <param name="matrix_a" value="matrix_no_header_a.tsv" />
+            <param name="matrix_b" value="matrix_no_header_b.tsv" />
+            <param name="delimiter_a" value="tab" />
+            <param name="delimiter_b" value="tab" />
+            <param name="has_header_a" value="false" />
+            <param name="has_header_b" value="false" />
+            <param name="id_column_a" value="1" />
+            <param name="id_column_b" value="1" />
+            <param name="feature_start_a" value="2" />
+            <param name="feature_start_b" value="2" />
+            <param name="method" value="spearman" />
+            <param name="alternative" value="two-sided" />
+            <param name="alpha" value="0.05" />
+            <param name="min_pairs" value="3" />
+            <output name="per_feature" file="rowwise_association_no_header_per_feature.tsv" />
+            <output name="summary" file="rowwise_association_no_header_summary.tsv" />
+        </test>
+    </tests>
+    <help><![CDATA[
+This tool computes one association test per matched feature across two matrices.
+Rows are observations and feature columns are matched by header name. Observation
+rows are matched by the selected identifier columns.
+
+Missing values are dropped separately for each feature, so a feature can still
+be tested when only some observation pairs are missing. The per-feature p-values
+are adjusted with the Benjamini-Hochberg procedure.
+    ]]></help>
+    <citations>
+        <citation type="doi">10.1038/s41592-019-0686-2</citation>
+    </citations>
+</tool>

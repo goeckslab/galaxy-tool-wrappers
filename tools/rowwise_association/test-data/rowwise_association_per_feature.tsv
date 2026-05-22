@@ -1,0 +1,4 @@
+feature	n_pairs	statistic	p_value	p_adjust_bh	significant
+gene_a	4	1	0	0	true
+gene_b	4	-1	0	0	true
+gene_c	3	-1	0	0	true

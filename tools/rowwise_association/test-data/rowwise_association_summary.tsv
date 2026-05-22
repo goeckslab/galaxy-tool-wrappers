@@ -1,0 +1,9 @@
+field	value
+method	spearman
+alternative	two-sided
+alpha	0.050000000000000003
+matched_observations	4
+matched_features	3
+finite_tests	3
+significant_count	3
+significant_percent	100
