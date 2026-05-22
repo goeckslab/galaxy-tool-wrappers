@@ -1,7 +1,6 @@
-<tool id="rds_to_tabular" name="RDS to tabular" version="0.1.0+galaxy0" profile="22.05">
+<tool id="rds_to_tabular" name="RDS to tabular" version="0.1.0+galaxy1" profile="22.05">
     <description>convert R serialized rectangular objects into tabular data</description>
     <requirements>
-        <requirement type="package" version="4.3.3">r-base</requirement>
         <requirement type="package" version="1.42.0">bioconductor-deseq2</requirement>
     </requirements>
     <command detect_errors="exit_code"><![CDATA[
