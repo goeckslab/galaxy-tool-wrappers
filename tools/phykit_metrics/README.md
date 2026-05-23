@@ -1,16 +1,17 @@
 # PhyKIT Metrics
 
-This wrapper exposes PhyKIT operations that are present in the PhyKIT command
-line program but are not exposed by the current ToolShed `padge/phykit` wrapper.
+This wrapper exposes selected PhyKIT operations through direct Galaxy tool
+interfaces.
 
 Initial operations:
 
+- evolutionary rate
 - total tree length
 - long branch score
 - treeness
 - relative composition variability
 
 The existing ToolShed `padge/phykit` wrapper should still be installed for its
-covered operations, especially parsimony informative sites, evolutionary rate,
-patristic distances, and treeness over RCV. This wrapper complements those
-tools by exposing metrics that are absent from the published wrapper XMLs.
+covered operations, especially parsimony informative sites, patristic
+distances, and treeness over RCV. This wrapper complements those tools by
+exposing a small set of direct metric commands with focused tests.

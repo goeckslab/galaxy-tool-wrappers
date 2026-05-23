@@ -2,9 +2,9 @@ name: phykit_metrics
 owner: goeckslab
 description: PhyKIT tree and alignment metrics
 long_description: |
-  Galaxy wrapper for PhyKIT metrics that are not exposed by the current
-  ToolShed PhyKIT wrapper, including total tree length, long branch score,
-  treeness, and relative composition variability.
+  Galaxy wrapper for selected PhyKIT metrics, including evolutionary rate,
+  total tree length, long branch score, treeness, and relative composition
+  variability.
 categories:
   - Phylogenetics
 remote_repository_url: https://github.com/goeckslab/galaxy-tools/tree/main/tools/phykit_metrics

@@ -1,10 +1,12 @@
-<tool id="phykit_metrics" name="PhyKIT metrics" version="0.1.0+galaxy0" profile="22.05">
+<tool id="phykit_metrics" name="PhyKIT metrics" version="0.1.1+galaxy0" profile="22.05">
     <description>additional tree and alignment metrics</description>
     <requirements>
         <requirement type="package" version="2.1.93">phykit</requirement>
     </requirements>
     <command detect_errors="exit_code"><![CDATA[
-#if $operation.selector == "total_tree_length"
+#if $operation.selector == "evolutionary_rate"
+phykit evolutionary_rate '$operation.tree' > '$output'
+#elif $operation.selector == "total_tree_length"
 phykit total_tree_length '$operation.tree' > '$output'
 #elif $operation.selector == "long_branch_score"
 phykit long_branch_score '$operation.tree' $operation.verbose > '$output'
@@ -19,12 +21,16 @@ phykit relative_composition_variability_taxon '$operation.alignment' > '$output'
     <inputs>
         <conditional name="operation">
             <param name="selector" type="select" label="PhyKIT metric">
+                <option value="evolutionary_rate">Evolutionary rate</option>
                 <option value="total_tree_length" selected="true">Total tree length</option>
                 <option value="long_branch_score">Long branch score</option>
                 <option value="treeness">Treeness</option>
                 <option value="relative_composition_variability">Relative composition variability</option>
                 <option value="relative_composition_variability_taxon">Relative composition variability per taxon</option>
             </param>
+            <when value="evolutionary_rate">
+                <param name="tree" type="data" format="newick,txt" label="Tree file" />
+            </when>
             <when value="total_tree_length">
                 <param name="tree" type="data" format="newick,txt" label="Tree file" />
             </when>
@@ -47,6 +53,16 @@ phykit relative_composition_variability_taxon '$operation.alignment' > '$output'
         <data name="output" format="tabular" label="${tool.name} on ${on_string}" />
     </outputs>
     <tests>
+        <test expect_num_outputs="1">
+            <param name="operation|selector" value="evolutionary_rate" />
+            <param name="operation|tree" value="simple.tre" />
+            <output name="output" file="evolutionary_rate_simple.txt" />
+        </test>
+        <test expect_num_outputs="1">
+            <param name="operation|selector" value="evolutionary_rate" />
+            <param name="operation|tree" value="shorter.tre" />
+            <output name="output" file="evolutionary_rate_shorter.txt" />
+        </test>
         <test>
             <param name="operation|selector" value="total_tree_length" />
             <param name="operation|tree" value="simple.tre" />
@@ -65,8 +81,9 @@ phykit relative_composition_variability_taxon '$operation.alignment' > '$output'
         </test>
     </tests>
     <help><![CDATA[
-This wrapper adds PhyKIT metrics missing from the current ToolShed `padge/phykit`
-wrapper. It is intended to complement, not replace, that existing wrapper.
+This wrapper exposes selected PhyKIT tree and alignment metrics with direct
+one-command Galaxy interfaces. It is intended to complement, not replace, other
+PhyKIT wrappers.
 
 For long branch score, use verbose output when downstream analysis needs the
 per-taxon scores rather than only summary statistics.
