@@ -1,0 +1,120 @@
+<tool id="kegg_ora" name="KEGG ORA" version="0.1.0+galaxy0" profile="22.05">
+    <description>run pathway over-representation analysis from gene lists</description>
+    <requirements>
+        <requirement type="package" version="3.11">python</requirement>
+    </requirements>
+    <command detect_errors="exit_code"><![CDATA[
+python '$__tool_directory__/kegg_ora.py'
+    --foreground '$foreground'
+    --foreground-column '$foreground_column'
+    --foreground-has-header '$foreground_has_header'
+    #if $background_cond.selector == "background"
+        --background '$background_cond.background'
+        --background-column '$background_cond.background_column'
+        --background-has-header '$background_cond.background_has_header'
+    #end if
+    --mapping-source '$mapping_source.selector'
+    #if $mapping_source.selector == "kegg_rest"
+        --organism '$mapping_source.organism'
+    #else
+        --mapping-table '$mapping_source.mapping_table'
+        --mapping-gene-column '$mapping_source.mapping_gene_column'
+        --mapping-pathway-column '$mapping_source.mapping_pathway_column'
+        --mapping-name-column '$mapping_source.mapping_name_column'
+        --mapping-has-header '$mapping_source.mapping_has_header'
+    #end if
+    --output '$output'
+    --contributing-genes '$contributing_genes'
+    ]]></command>
+    <inputs>
+        <param name="foreground" type="data" format="tabular,txt" label="Foreground gene list" />
+        <param name="foreground_has_header" type="boolean" checked="true" truevalue="true" falsevalue="false" label="Foreground table has a header row" />
+        <param name="foreground_column" type="integer" min="1" value="1" label="Foreground gene ID column" />
+        <conditional name="background_cond">
+            <param name="selector" type="select" label="Background universe">
+                <option value="all_mapped" selected="true">Use all genes present in the pathway mapping</option>
+                <option value="background">Use a supplied background gene list</option>
+            </param>
+            <when value="all_mapped" />
+            <when value="background">
+                <param name="background" type="data" format="tabular,txt" label="Background gene list" />
+                <param name="background_has_header" type="boolean" checked="true" truevalue="true" falsevalue="false" label="Background table has a header row" />
+                <param name="background_column" type="integer" min="1" value="1" label="Background gene ID column" />
+            </when>
+        </conditional>
+        <conditional name="mapping_source">
+            <param name="selector" type="select" label="Pathway mapping source">
+                <option value="kegg_rest">Download organism mapping from KEGG REST</option>
+                <option value="mapping_table" selected="true">Use a supplied gene-to-pathway mapping table</option>
+            </param>
+            <when value="kegg_rest">
+                <param name="organism" type="text" value="" label="KEGG organism code" help="Examples: hsa, mmu, eco, pau. Requires network access from the Galaxy job." />
+            </when>
+            <when value="mapping_table">
+                <param name="mapping_table" type="data" format="tabular,txt" label="Gene-to-pathway mapping table" />
+                <param name="mapping_has_header" type="boolean" checked="true" truevalue="true" falsevalue="false" label="Mapping table has a header row" />
+                <param name="mapping_gene_column" type="integer" min="1" value="1" label="Gene ID column" />
+                <param name="mapping_pathway_column" type="integer" min="1" value="2" label="Pathway ID column" />
+                <param name="mapping_name_column" type="integer" min="0" value="3" label="Pathway name column" help="Use 0 if no pathway name column is present." />
+            </when>
+        </conditional>
+    </inputs>
+    <outputs>
+        <data name="output" format="tabular" label="${tool.name} on ${on_string}: pathway results" />
+        <data name="contributing_genes" format="tabular" label="${tool.name} on ${on_string}: contributing genes" />
+    </outputs>
+    <tests>
+        <test>
+            <param name="foreground" value="foreground.tsv" />
+            <param name="foreground_has_header" value="true" />
+            <param name="foreground_column" value="1" />
+            <param name="background_cond|selector" value="background" />
+            <param name="background_cond|background" value="background.tsv" />
+            <param name="background_cond|background_has_header" value="true" />
+            <param name="background_cond|background_column" value="1" />
+            <param name="mapping_source|selector" value="mapping_table" />
+            <param name="mapping_source|mapping_table" value="mapping.tsv" />
+            <param name="mapping_source|mapping_has_header" value="true" />
+            <param name="mapping_source|mapping_gene_column" value="1" />
+            <param name="mapping_source|mapping_pathway_column" value="2" />
+            <param name="mapping_source|mapping_name_column" value="3" />
+            <output name="output" file="kegg_ora_results.tsv" />
+            <output name="contributing_genes" file="kegg_ora_contributing.tsv" />
+        </test>
+        <test expect_exit_code="1" expect_failure="true">
+            <param name="foreground" value="foreground_short_row.tsv" />
+            <param name="foreground_has_header" value="true" />
+            <param name="foreground_column" value="2" />
+            <param name="background_cond|selector" value="background" />
+            <param name="background_cond|background" value="background.tsv" />
+            <param name="background_cond|background_has_header" value="true" />
+            <param name="background_cond|background_column" value="1" />
+            <param name="mapping_source|selector" value="mapping_table" />
+            <param name="mapping_source|mapping_table" value="mapping.tsv" />
+            <param name="mapping_source|mapping_has_header" value="true" />
+            <param name="mapping_source|mapping_gene_column" value="1" />
+            <param name="mapping_source|mapping_pathway_column" value="2" />
+            <param name="mapping_source|mapping_name_column" value="3" />
+            <assert_stderr>
+                <has_text text="Gene-list row 3 has 1 columns, but selected gene column is 2" />
+            </assert_stderr>
+        </test>
+    </tests>
+    <help><![CDATA[
+KEGG ORA performs pathway over-representation analysis from a foreground gene
+list and a pathway mapping. It reports one row per pathway with foreground
+hits, pathway size, universe size, hypergeometric upper-tail p-value, and
+Benjamini-Hochberg adjusted p-value.
+
+Use a supplied mapping table for reproducible analyses or organisms/databases
+that are not directly supported by an installed Galaxy enrichment wrapper. KEGG
+REST mode can download a current KEGG organism mapping when network access is
+available to the Galaxy job.
+
+The contributing-genes output has one row per foreground gene that maps to a
+pathway and is useful for counting which genes contribute to a selected pathway.
+    ]]></help>
+    <citations>
+        <citation type="doi">10.1093/bioinformatics/bti565</citation>
+    </citations>
+</tool>

@@ -1,0 +1,13 @@
+name: kegg_ora
+owner: goeckslab
+description: KEGG over-representation analysis for gene lists
+long_description: |
+  Run pathway over-representation analysis from a foreground gene list and a
+  KEGG-style gene-to-pathway mapping. The tool reports hypergeometric p-values,
+  Benjamini-Hochberg adjusted p-values, and contributing foreground genes.
+categories:
+  - Statistics
+  - Systems Biology
+remote_repository_url: https://github.com/goeckslab/galaxy-tools/tree/main/tools/kegg_ora
+homepage_url: https://github.com/goeckslab/galaxy-tools
+type: unrestricted
