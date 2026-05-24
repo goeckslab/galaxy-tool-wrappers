@@ -2,60 +2,75 @@
 
 Galaxy wrappers and wrapper prototypes for biomedical data analysis.
 
-This repository is intended to live under `goeckslab` and follow the same broad
-pattern as community Galaxy wrapper repositories: one tool directory per wrapper,
-Planemo lint/test support, and small test data where possible.
+This repository is intended to live under `goeckslab` and follow the broad
+pattern used by community Galaxy wrapper repositories: one tool directory per
+wrapper, Tool Shed metadata in each directory, Planemo lint/test support, and
+small committed test data where possible.
 
-## Current Priorities
+## Tool Index
 
-1. `rds_to_tabular`
-   - Converts `.rds` objects into Galaxy tabular datasets using R `readRDS()`.
-   - Supports common rectangular R objects such as data frames, matrices,
-     Bioconductor DataFrame-like objects, and lists containing a rectangular
-     table.
-
-2. `phykit_metrics`
-   - Exposes PhyKIT operations missing from the current ToolShed `padge/phykit`
-     wrapper, especially long branch score, total tree length, and standalone
-     relative composition variability.
-
-3. `nonparametric_rank_tests`
-   - Modern rank-test wrapper using SciPy; currently supports Mann-Whitney U
-     and Wilcoxon signed-rank tests.
-   - Replaces the need to install the legacy `bebatut/compute_wilcoxon_test`
-     wrapper on usegalaxy.org.
-
-4. `gseapy_enrichr`
-   - Runs GSEApy Enrichr over-representation analysis from a Galaxy gene list.
-   - Supports named Enrichr libraries or uploaded GMT files, standardized
-     result tables, ranked top terms, and term-substring summaries.
+| Tool | Purpose | Dependency strategy |
+| --- | --- | --- |
+| `featurewise_correlation` | Compute one Spearman or Pearson correlation test per matched feature across two matrices, with multiple-testing correction. | `scipy=1.12.0` package requirement. |
+| `gseapy_enrichr` | Run GSEApy Enrichr-style over-representation analysis from a Galaxy gene list, named Enrichr libraries, or uploaded GMT files. | `gseapy=1.2.1` package requirement. |
+| `kegg_ora` | Run KEGG-style pathway over-representation analysis from foreground/background gene lists and a gene-to-pathway mapping. | `python=3.11` package requirement, resolving to the Python BioContainer. |
+| `nonparametric_rank_tests` | Run independent Mann-Whitney U tests and paired Wilcoxon signed-rank tests on tabular data. | `scipy=1.12.0` package requirement. |
+| `phykit_metrics` | Expose selected PhyKIT tree and alignment metrics not covered by the current public Tool Shed PhyKIT wrappers. | `phykit=2.1.93` package requirement. |
+| `rds_to_tabular` | Convert RDS/RData objects containing rectangular R data into Galaxy tabular datasets. | `bioconductor-deseq2=1.42.0` package requirement for a BioContainer-backed R environment. |
 
 ## Development
 
-Run lint checks with Planemo from the repository root:
+Use the project virtual environment from the repository root:
 
 ```bash
-planemo lint tools/rds_to_tabular/rds_to_tabular.xml
-planemo lint tools/phykit_metrics/phykit_metrics.xml
-planemo lint tools/nonparametric_rank_tests/nonparametric_rank_tests.xml
-planemo lint tools/gseapy_enrichr/gseapy_enrichr.xml
+.venv/bin/planemo --version
 ```
 
-Run committed fixture tests:
+Run Planemo lint for every wrapper:
 
 ```bash
-planemo test --no_dependency_resolution tools/rds_to_tabular/rds_to_tabular.xml
-planemo test --conda_auto_install tools/phykit_metrics/phykit_metrics.xml
-planemo test --conda_auto_install tools/nonparametric_rank_tests/nonparametric_rank_tests.xml
-planemo test --conda_auto_install tools/gseapy_enrichr/gseapy_enrichr.xml
+for tool in tools/*/*.xml; do
+    .venv/bin/planemo lint "$tool"
+done
 ```
 
-Current local status:
+Run Tool Shed lint for every tool directory:
 
-- `rds_to_tabular`: Planemo lint passed; committed fixture test passed.
-- `phykit_metrics`: Planemo lint passed; committed fixture tests passed with
-  Galaxy-managed Conda dependencies; `planemo shed_lint` passed.
-- `nonparametric_rank_tests`: Planemo lint passed; ToolShed `shed_lint` passed;
-  committed fixture tests passed with Galaxy-managed Conda dependencies.
-- `gseapy_enrichr`: Planemo lint passed; ToolShed `shed_lint` passed;
-  committed GMT fixture test passed with Galaxy-managed Conda dependencies.
+```bash
+for repo in tools/*; do
+    .venv/bin/planemo shed_lint "$repo"
+done
+```
+
+Run a focused wrapper test:
+
+```bash
+.venv/bin/planemo test --conda_auto_install tools/kegg_ora/kegg_ora.xml
+```
+
+For usegalaxy.org-oriented checks, prefer testing the same container resolution
+path Galaxy will use. For example, `kegg_ora` should resolve `python=3.11` to
+`quay.io/biocontainers/python:3.11`:
+
+```bash
+TMPDIR="$HOME/.tmp/planemo-galaxy-tools" \
+    .venv/bin/planemo test --docker tools/kegg_ora/kegg_ora.xml
+```
+
+## Current Status
+
+- `featurewise_correlation`: Planemo lint and fixture tests pass locally; the
+  wrapper uses package requirements instead of a custom container.
+- `gseapy_enrichr`: Planemo lint, Tool Shed lint, and the committed GMT fixture
+  test pass locally; dependency resolution can use the existing GSEApy
+  BioContainer.
+- `kegg_ora`: Planemo lint, Tool Shed lint, direct fixture checks, and Docker
+  Planemo tests pass locally; malformed non-empty gene-list rows fail clearly.
+- `nonparametric_rank_tests`: Planemo lint, Tool Shed lint, and fixture tests
+  pass locally; grouped-table Wilcoxon input is rejected because it has no pair
+  identifier.
+- `phykit_metrics`: Planemo lint, Tool Shed lint, and fixture tests pass
+  locally with Galaxy-managed dependencies.
+- `rds_to_tabular`: Planemo lint, Tool Shed lint, and fixture tests pass locally;
+  list extraction and RData object-name handling have targeted regression
+  coverage.
