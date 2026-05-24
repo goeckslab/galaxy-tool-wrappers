@@ -1,7 +1,7 @@
-<tool id="featurewise_correlation" name="Feature-wise Correlation Tests" version="0.1.0+galaxy1" profile="22.05">
+<tool id="featurewise_correlation" name="Feature-wise Correlation Tests" version="0.1.0+galaxy2" profile="22.05">
     <description>compute per-feature Spearman or Pearson correlations between matched matrices</description>
     <requirements>
-        <container type="docker">quay.io/goeckslab/featurewise_correlation:0.1.0</container>
+        <requirement type="package" version="1.12.0">scipy</requirement>
     </requirements>
     <command detect_errors="exit_code"><![CDATA[
 python '$__tool_directory__/featurewise_correlation.py'

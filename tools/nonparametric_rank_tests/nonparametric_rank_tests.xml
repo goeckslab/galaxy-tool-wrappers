@@ -1,7 +1,7 @@
-<tool id="nonparametric_rank_tests" name="Nonparametric rank tests" version="0.1.0+galaxy0" profile="22.05">
+<tool id="nonparametric_rank_tests" name="Nonparametric rank tests" version="0.1.0+galaxy1" profile="22.05">
     <description>run rank-based tests on tabular data</description>
     <requirements>
-        <container type="docker">quay.io/goeckslab/nonparametric_rank_tests:0.1.0</container>
+        <requirement type="package" version="1.12.0">scipy</requirement>
     </requirements>
     <command detect_errors="exit_code"><![CDATA[
 python '$__tool_directory__/nonparametric_rank_tests.py'
