@@ -1,21 +1,97 @@
-<tool id="phykit_metrics" name="PhyKIT metrics" version="0.1.1+galaxy0" profile="22.05">
-    <description>additional tree and alignment metrics</description>
+<tool id="phykit_metrics" name="PhyKIT metrics" version="0.2.0+galaxy0" profile="22.05">
+    <description>tree and alignment metrics for single files or collections</description>
+    <macros>
+        <xml name="filters">
+            <param name="filter_suffix" type="text" optional="true" label="Only process members with this suffix" help="For example, .treefile for tree collections. Leave blank to process all members." />
+            <param name="filter_regex" type="text" optional="true" label="Only process members matching this regular expression" help="Applied to the collection member name. Leave blank to process all members." />
+        </xml>
+        <xml name="input_modes" token_format="" token_kind="">
+            <conditional name="input_mode">
+                <param name="selector" type="select" label="Input mode">
+                    <option value="single" selected="true">Single @KIND@ file</option>
+                    <option value="collection">One @KIND@ collection</option>
+                    <option value="grouped_collections">Grouped @KIND@ collections</option>
+                    <option value="zip_archive">ZIP archive of @KIND@ files</option>
+                    <option value="grouped_zip_archives">Grouped ZIP archives of @KIND@ files</option>
+                </param>
+                <when value="single">
+                    <param name="input" type="data" format="@FORMAT@" label="@KIND@ file" />
+                </when>
+                <when value="collection">
+                    <param name="collection" type="data_collection" collection_type="list" format="@FORMAT@" label="@KIND@ collection" />
+                    <param name="group_label" type="text" value="collection" label="Group label" help="Stored in the group column of the combined metrics table." />
+                    <expand macro="filters" />
+                </when>
+                <when value="grouped_collections">
+                    <repeat name="groups" title="Input group" min="1">
+                        <param name="label" type="text" label="Group label" />
+                        <param name="collection" type="data_collection" collection_type="list" format="@FORMAT@" label="@KIND@ collection" />
+                    </repeat>
+                    <expand macro="filters" />
+                </when>
+                <when value="zip_archive">
+                    <param name="archive" type="data" format="zip" label="ZIP archive containing @KIND@ files" />
+                    <param name="archive_label" type="text" value="archive" label="Group label" help="Stored in the group column of the combined metrics table." />
+                    <expand macro="filters" />
+                </when>
+                <when value="grouped_zip_archives">
+                    <repeat name="archives" title="Input archive group" min="1">
+                        <param name="label" type="text" label="Group label" />
+                        <param name="archive" type="data" format="zip" label="ZIP archive containing @KIND@ files" />
+                    </repeat>
+                    <expand macro="filters" />
+                </when>
+            </conditional>
+        </xml>
+    </macros>
     <requirements>
         <requirement type="package" version="2.1.93">phykit</requirement>
     </requirements>
     <command detect_errors="exit_code"><![CDATA[
-#if $operation.selector == "evolutionary_rate"
-phykit evolutionary_rate '$operation.tree' > '$output'
-#elif $operation.selector == "total_tree_length"
-phykit total_tree_length '$operation.tree' > '$output'
-#elif $operation.selector == "long_branch_score"
-phykit long_branch_score '$operation.tree' $operation.verbose > '$output'
-#elif $operation.selector == "treeness"
-phykit treeness '$operation.tree' > '$output'
-#elif $operation.selector == "relative_composition_variability"
-phykit relative_composition_variability '$operation.alignment' > '$output'
-#elif $operation.selector == "relative_composition_variability_taxon"
-phykit relative_composition_variability_taxon '$operation.alignment' > '$output'
+#set $input_mode = $operation.input_mode
+python '$__tool_directory__/phykit_metrics.py'
+    --metric '$operation.selector'
+    --mode '$input_mode.selector'
+#if $operation.selector == "long_branch_score"
+    #if str($operation.verbose) == "true"
+    --verbose
+    #end if
+#end if
+    --output '$output'
+    --failed-output '$failed_files'
+    --summary-output '$summary'
+#if $input_mode.selector == "single"
+    --single-input '$input_mode.input'
+#elif $input_mode.selector == "collection"
+    --collection-label '$input_mode.group_label'
+    --filter-suffix '$input_mode.filter_suffix'
+    --filter-regex '$input_mode.filter_regex'
+    #for $member in $input_mode.collection
+    --member '$member'
+    --member-name '$member.element_identifier'
+    #end for
+#elif $input_mode.selector == "grouped_collections"
+    --filter-suffix '$input_mode.filter_suffix'
+    --filter-regex '$input_mode.filter_regex'
+    #for $group in $input_mode.groups
+        #for $member in $group.collection
+    --member '$member'
+    --member-name '$member.element_identifier'
+    --member-group '$group.label'
+        #end for
+    #end for
+#elif $input_mode.selector == "zip_archive"
+    --archive-label '$input_mode.archive_label'
+    --filter-suffix '$input_mode.filter_suffix'
+    --filter-regex '$input_mode.filter_regex'
+    --archive '$input_mode.archive'
+#else
+    --filter-suffix '$input_mode.filter_suffix'
+    --filter-regex '$input_mode.filter_regex'
+    #for $archive_group in $input_mode.archives
+    --archive '$archive_group.archive'
+    --archive-group '$archive_group.label'
+    #end for
 #end if
     ]]></command>
     <inputs>
@@ -29,64 +105,176 @@ phykit relative_composition_variability_taxon '$operation.alignment' > '$output'
                 <option value="relative_composition_variability_taxon">Relative composition variability per taxon</option>
             </param>
             <when value="evolutionary_rate">
-                <param name="tree" type="data" format="newick,txt" label="Tree file" />
+                <expand macro="input_modes" format="newick,txt" kind="tree" />
             </when>
             <when value="total_tree_length">
-                <param name="tree" type="data" format="newick,txt" label="Tree file" />
+                <expand macro="input_modes" format="newick,txt" kind="tree" />
             </when>
             <when value="long_branch_score">
-                <param name="tree" type="data" format="newick,txt" label="Tree file" />
-                <param name="verbose" type="boolean" checked="true" truevalue="--verbose" falsevalue="" label="Output scores for each taxon" />
+                <param name="verbose" type="boolean" checked="true" truevalue="true" falsevalue="false" label="Output scores for each taxon" />
+                <expand macro="input_modes" format="newick,txt" kind="tree" />
             </when>
             <when value="treeness">
-                <param name="tree" type="data" format="newick,txt" label="Tree file" />
+                <expand macro="input_modes" format="newick,txt" kind="tree" />
             </when>
             <when value="relative_composition_variability">
-                <param name="alignment" type="data" format="fasta" label="Alignment file" />
+                <expand macro="input_modes" format="fasta" kind="alignment" />
             </when>
             <when value="relative_composition_variability_taxon">
-                <param name="alignment" type="data" format="fasta" label="Alignment file" />
+                <expand macro="input_modes" format="fasta" kind="alignment" />
             </when>
         </conditional>
     </inputs>
     <outputs>
         <data name="output" format="tabular" label="${tool.name} on ${on_string}" />
+        <data name="failed_files" format="tabular" label="${tool.name} failed files on ${on_string}">
+            <filter>operation["input_mode"]["selector"] != "single"</filter>
+        </data>
+        <data name="summary" format="tabular" label="${tool.name} summary on ${on_string}">
+            <filter>operation["input_mode"]["selector"] != "single"</filter>
+        </data>
     </outputs>
     <tests>
         <test expect_num_outputs="1">
             <param name="operation|selector" value="evolutionary_rate" />
-            <param name="operation|tree" value="simple.tre" />
+            <param name="operation|input_mode|selector" value="single" />
+            <param name="operation|input_mode|input" value="simple.tre" />
             <output name="output" file="evolutionary_rate_simple.txt" />
         </test>
         <test expect_num_outputs="1">
             <param name="operation|selector" value="evolutionary_rate" />
-            <param name="operation|tree" value="shorter.tre" />
+            <param name="operation|input_mode|selector" value="single" />
+            <param name="operation|input_mode|input" value="shorter.tre" />
             <output name="output" file="evolutionary_rate_shorter.txt" />
         </test>
-        <test>
+        <test expect_num_outputs="1">
             <param name="operation|selector" value="total_tree_length" />
-            <param name="operation|tree" value="simple.tre" />
+            <param name="operation|input_mode|selector" value="single" />
+            <param name="operation|input_mode|input" value="simple.tre" />
             <output name="output" file="total_tree_length.txt" />
         </test>
-        <test>
+        <test expect_num_outputs="1">
             <param name="operation|selector" value="long_branch_score" />
-            <param name="operation|tree" value="simple.tre" />
             <param name="operation|verbose" value="true" />
+            <param name="operation|input_mode|selector" value="single" />
+            <param name="operation|input_mode|input" value="simple.tre" />
             <output name="output" file="long_branch_score_verbose.txt" />
         </test>
-        <test>
+        <test expect_num_outputs="1">
             <param name="operation|selector" value="relative_composition_variability" />
-            <param name="operation|alignment" value="simple.fa" />
+            <param name="operation|input_mode|selector" value="single" />
+            <param name="operation|input_mode|input" value="simple.fa" />
             <output name="output" file="rcv.txt" />
+        </test>
+        <test expect_num_outputs="3">
+            <param name="operation|selector" value="evolutionary_rate" />
+            <param name="operation|input_mode|selector" value="collection" />
+            <param name="operation|input_mode|group_label" value="animals" />
+            <param name="operation|input_mode|collection">
+                <collection type="list">
+                    <element name="simple.tre" value="simple.tre" />
+                    <element name="shorter.tre" value="shorter.tre" />
+                </collection>
+            </param>
+            <output name="output" file="batch_evolutionary_rate.tsv" />
+            <output name="failed_files" file="empty_failed_files.tsv" />
+            <output name="summary" file="batch_evolutionary_rate_summary.tsv" />
+        </test>
+        <test expect_num_outputs="3">
+            <param name="operation|selector" value="long_branch_score" />
+            <param name="operation|verbose" value="true" />
+            <param name="operation|input_mode|selector" value="collection" />
+            <param name="operation|input_mode|group_label" value="animals" />
+            <param name="operation|input_mode|collection">
+                <collection type="list">
+                    <element name="simple.tre" value="simple.tre" />
+                </collection>
+            </param>
+            <output name="output" file="batch_long_branch_score_verbose.tsv" />
+            <output name="failed_files" file="empty_failed_files.tsv" />
+            <output name="summary" file="batch_long_branch_score_summary.tsv" />
+        </test>
+        <test expect_num_outputs="3">
+            <param name="operation|selector" value="evolutionary_rate" />
+            <param name="operation|input_mode|selector" value="grouped_collections" />
+            <repeat name="operation|input_mode|groups">
+                <param name="label" value="animals" />
+                <param name="collection">
+                    <collection type="list">
+                        <element name="simple.tre" value="simple.tre" />
+                    </collection>
+                </param>
+            </repeat>
+            <repeat name="operation|input_mode|groups">
+                <param name="label" value="fungi" />
+                <param name="collection">
+                    <collection type="list">
+                        <element name="shorter.tre" value="shorter.tre" />
+                    </collection>
+                </param>
+            </repeat>
+            <output name="output" file="grouped_evolutionary_rate.tsv" />
+            <output name="failed_files" file="empty_failed_files.tsv" />
+            <output name="summary" file="grouped_evolutionary_rate_summary.tsv" />
+        </test>
+        <test expect_num_outputs="3">
+            <param name="operation|selector" value="evolutionary_rate" />
+            <param name="operation|input_mode|selector" value="zip_archive" />
+            <param name="operation|input_mode|archive" value="animals_trees.zip" ftype="zip" />
+            <param name="operation|input_mode|archive_label" value="animals" />
+            <param name="operation|input_mode|filter_suffix" value=".tre" />
+            <output name="output" file="zip_evolutionary_rate.tsv" />
+            <output name="failed_files" file="empty_failed_files.tsv" />
+            <output name="summary" file="zip_evolutionary_rate_summary.tsv" />
+        </test>
+        <test expect_num_outputs="3">
+            <param name="operation|selector" value="evolutionary_rate" />
+            <param name="operation|input_mode|selector" value="grouped_zip_archives" />
+            <param name="operation|input_mode|filter_suffix" value=".tre" />
+            <repeat name="operation|input_mode|archives">
+                <param name="label" value="animals" />
+                <param name="archive" value="animals_trees.zip" ftype="zip" />
+            </repeat>
+            <repeat name="operation|input_mode|archives">
+                <param name="label" value="fungi" />
+                <param name="archive" value="fungi_trees.zip" ftype="zip" />
+            </repeat>
+            <output name="output" file="grouped_zip_evolutionary_rate.tsv" />
+            <output name="failed_files" file="empty_failed_files.tsv" />
+            <output name="summary" file="grouped_zip_evolutionary_rate_summary.tsv" />
         </test>
     </tests>
     <help><![CDATA[
-This wrapper exposes selected PhyKIT tree and alignment metrics with direct
-one-command Galaxy interfaces. It is intended to complement, not replace, other
-PhyKIT wrappers.
+This wrapper exposes selected PhyKIT tree and alignment metrics.
 
-For long branch score, use verbose output when downstream analysis needs the
-per-taxon scores rather than only summary statistics.
+Input modes
+-----------
+
+Single-file mode preserves the direct PhyKIT output for one tree or alignment.
+Collection mode runs the selected metric for each member of one Galaxy
+collection and writes a combined table. Grouped-collection mode accepts repeated
+group labels plus collections and writes a long table suitable for downstream
+group comparison tools.
+
+ZIP archive modes are convenience inputs for archive-heavy histories. They
+extract local Galaxy ZIP datasets inside the job working directory, reject unsafe
+member paths such as absolute paths or ``..`` traversal, apply the same
+suffix/regular-expression filters, and then run the selected PhyKIT metric.
+Galaxy-native collection mode remains the preferred route when users want to
+inspect or reuse extracted archive members.
+
+Collection outputs include:
+
+* a metrics table with group, file identifier, file name, metric, value, and
+  status columns;
+* a failed-files table with nonzero or unparsable PhyKIT runs; and
+* a summary table with total, selected, processed, failed, and skipped file
+  counts per group.
+
+Use suffix or regular-expression filters when a collection contains mixed files,
+for example to process only ``.treefile`` members for tree metrics. In ZIP
+modes, leaving both filters blank processes every regular archive member and
+writes a warning to standard error.
     ]]></help>
     <citations>
         <citation type="doi">10.1093/bioinformatics/btab096</citation>

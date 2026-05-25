@@ -1,0 +1,3 @@
+group	file_id	file_name	metric	value	status
+animals	simple	simple.tre	evolutionary_rate	3.75	ok
+animals	shorter	shorter.tre	evolutionary_rate	0.375	ok

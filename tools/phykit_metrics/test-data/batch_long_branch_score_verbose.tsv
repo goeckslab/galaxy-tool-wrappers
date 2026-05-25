@@ -1,0 +1,5 @@
+group	file_id	file_name	metric	taxon	value	status
+animals	simple	simple.tre	long_branch_score	A	-12.0	ok
+animals	simple	simple.tre	long_branch_score	B	-4.0	ok
+animals	simple	simple.tre	long_branch_score	C	4.0	ok
+animals	simple	simple.tre	long_branch_score	D	12.0	ok

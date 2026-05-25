@@ -15,7 +15,7 @@ small committed test data where possible.
 | `gseapy_enrichr` | Run GSEApy Enrichr-style over-representation analysis from a Galaxy gene list, named Enrichr libraries, or uploaded GMT files. | `gseapy=1.2.1` package requirement. |
 | `kegg_ora` | Run KEGG-style pathway over-representation analysis from foreground/background gene lists and a gene-to-pathway mapping. | `python=3.11` package requirement, resolving to the Python BioContainer. |
 | `nonparametric_rank_tests` | Run independent Mann-Whitney U tests and paired Wilcoxon signed-rank tests on tabular data. | Explicit public BioContainer runtime plus `scipy=1.17.1` requirement. |
-| `phykit_metrics` | Expose selected PhyKIT tree and alignment metrics not covered by the current public Tool Shed PhyKIT wrappers. | `phykit=2.1.93` package requirement. |
+| `phykit_metrics` | Expose selected PhyKIT tree and alignment metrics for single files, collections, grouped collections, ZIP archives, or grouped ZIP archives. | `phykit=2.1.93` package requirement. |
 | `rds_to_tabular` | Convert RDS/RData objects containing rectangular R data into Galaxy tabular datasets. | `bioconductor-deseq2=1.42.0` package requirement for a BioContainer-backed R environment. |
 
 ## Development
@@ -72,7 +72,9 @@ TMPDIR="$HOME/.tmp/planemo-galaxy-tools" \
   identifier, and the wrapper uses an explicit public GSEApy BioContainer
   runtime that includes SciPy, avoiding Conda fallback.
 - `phykit_metrics`: Planemo lint, Tool Shed lint, and fixture tests pass
-  locally with Galaxy-managed dependencies.
+  locally with Galaxy-managed dependencies, including collection and
+  grouped-collection batch modes. ZIP and grouped-ZIP convenience modes are
+  also covered by fixture tests.
 - `rds_to_tabular`: Planemo lint, Tool Shed lint, and fixture tests pass locally;
   list extraction and RData object-name handling have targeted regression
   coverage.
