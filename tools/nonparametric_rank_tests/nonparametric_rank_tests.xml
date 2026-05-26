@@ -1,8 +1,7 @@
-<tool id="nonparametric_rank_tests" name="Nonparametric rank tests" version="0.1.0+galaxy1" profile="22.05">
+<tool id="nonparametric_rank_tests" name="Nonparametric rank tests" version="0.1.0+galaxy2" profile="22.05">
     <description>run rank-based tests on tabular data</description>
     <requirements>
-        <requirement type="package" version="1.17.1">scipy</requirement>
-        <container type="docker">quay.io/biocontainers/gseapy:1.2.1--py313h551aa79_0</container>
+        <requirement type="package" version="1.2.1">gseapy</requirement>
     </requirements>
     <command detect_errors="exit_code"><![CDATA[
 python '$__tool_directory__/nonparametric_rank_tests.py'
