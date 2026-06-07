@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import math
 import sys
 import urllib.request
@@ -105,6 +106,15 @@ def read_mapping_table(
     return dict(pathway_to_genes), pathway_names
 
 
+def mapping_hash(pathway_to_genes: dict[str, set[str]], pathway_names: dict[str, str]) -> str:
+    lines: list[str] = []
+    for pathway_id in sorted(pathway_to_genes):
+        pathway_name = pathway_names.get(pathway_id, "")
+        for gene in sorted(pathway_to_genes[pathway_id]):
+            lines.append(f"{pathway_id}\t{pathway_name}\t{gene}")
+    return hashlib.sha256("\n".join(lines).encode("utf-8")).hexdigest()
+
+
 def hypergeom_sf(k: int, n: int, K: int, N: int) -> float:
     """P(X >= k) for X ~ Hypergeometric(N, K, n)."""
     if k <= 0:
@@ -175,12 +185,24 @@ def write_outputs(
                 writer.writerow([row["pathway_id"], row["pathway_name"], gene])
 
 
+def write_summary(summary: Path, metrics: dict[str, object]) -> None:
+    with summary.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.writer(handle, delimiter="\t", lineterminator="\n")
+        writer.writerow(["metric", "value"])
+        for key, value in metrics.items():
+            writer.writerow([key, value])
+
+
 def run(args: argparse.Namespace) -> None:
-    foreground = set(read_gene_list(Path(args.foreground), args.foreground_column, args.foreground_has_header == "true"))
+    foreground_genes = read_gene_list(Path(args.foreground), args.foreground_column, args.foreground_has_header == "true")
+    foreground = set(foreground_genes)
     if args.background:
-        background = set(read_gene_list(Path(args.background), args.background_column, args.background_has_header == "true"))
+        background_genes = read_gene_list(Path(args.background), args.background_column, args.background_has_header == "true")
+        background = set(background_genes)
+        background_source = "supplied"
     else:
         background = None
+        background_source = "all_mapped"
 
     if args.mapping_source == "kegg_rest":
         pathway_to_genes, pathway_names = read_kegg_rest_mapping(args.organism)
@@ -228,11 +250,37 @@ def run(args: argparse.Namespace) -> None:
             }
         )
 
-    for row, adjusted in zip(rows, bh_adjust(p_values), strict=True):
-        row["adjusted_p_value"] = adjusted
+    if args.p_adjust_scope == "foreground_hits":
+        adjusted_indices = [idx for idx, row in enumerate(rows) if row["k"] > 0]
+        adjusted_values = bh_adjust([rows[idx]["p_value"] for idx in adjusted_indices])
+        for idx, adjusted in zip(adjusted_indices, adjusted_values, strict=True):
+            rows[idx]["adjusted_p_value"] = adjusted
+    else:
+        adjusted_indices = list(range(len(rows)))
+        for row, adjusted in zip(rows, bh_adjust(p_values), strict=True):
+            row["adjusted_p_value"] = adjusted
 
     rows.sort(key=lambda row: (row["adjusted_p_value"], row["p_value"], row["pathway_id"]))
     write_outputs(Path(args.output), Path(args.contributing_genes), rows)
+    write_summary(
+        Path(args.summary),
+        {
+            "mapping_source": args.mapping_source,
+            "organism": args.organism if args.mapping_source == "kegg_rest" else "",
+            "mapping_hash": mapping_hash(pathway_to_genes, pathway_names),
+            "background_source": background_source,
+            "p_adjust_method": "BH",
+            "p_adjust_scope": args.p_adjust_scope,
+            "foreground_input_genes": len(foreground_genes),
+            "foreground_unique_genes": len(foreground),
+            "foreground_genes_in_universe": n,
+            "universe_genes": N,
+            "pathways_in_mapping": len(pathway_to_genes),
+            "pathways_with_genes_in_universe": len(rows),
+            "pathways_with_foreground_hits": sum(1 for row in rows if row["k"] > 0),
+            "pathways_adjusted": len(adjusted_indices),
+        },
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -250,8 +298,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--mapping-pathway-column", type=int, default=2)
     parser.add_argument("--mapping-name-column", type=int, default=3)
     parser.add_argument("--mapping-has-header", choices=["true", "false"], default="true")
+    parser.add_argument("--p-adjust-scope", choices=["all_pathways", "foreground_hits"], default="all_pathways")
     parser.add_argument("--output", required=True)
     parser.add_argument("--contributing-genes", required=True)
+    parser.add_argument("--summary", required=True)
     return parser
 
 

@@ -1,0 +1,15 @@
+metric	value
+mapping_source	mapping_table
+organism	
+mapping_hash	8e378c8c00a98ce84ad8683cabcaae602f9bd62b7d534c2474affdf66bb3e889
+background_source	supplied
+p_adjust_method	BH
+p_adjust_scope	foreground_hits
+foreground_input_genes	4
+foreground_unique_genes	4
+foreground_genes_in_universe	3
+universe_genes	9
+pathways_in_mapping	3
+pathways_with_genes_in_universe	3
+pathways_with_foreground_hits	2
+pathways_adjusted	2

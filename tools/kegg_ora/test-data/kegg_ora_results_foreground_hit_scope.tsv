@@ -1,0 +1,4 @@
+pathway_id	pathway_name	foreground_hits	pathway_genes_in_universe	foreground_genes_in_universe	universe_genes	p_value	adjusted_p_value	foreground_hit_genes
+org00010	ABC transporters	3	5	3	9	0.119047619048	0.238095238095	g1,g2,g3
+org00020	Carbon metabolism	1	5	3	9	0.952380952381	0.952380952381	g1
+org00030	Zero hit pathway	0	3	3	9	1	1	
